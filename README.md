@@ -42,7 +42,8 @@ To run only a single stage:
 ## Data layout
 
 - `data/bronze/`
-  - Incident category files (CSV): `collision*.csv` are treated as `collision`, everything else as `traffic_incident`
+  - Unified incident snapshot (preferred): `Real-Time_Traffic_Incident_Reports_YYYYMMDD.csv`
+  - Legacy incident category files (CSV): still supported, but ignored when the unified snapshot exists
   - Weather history (CSV): `austin_weather_training_data.csv` (the silverizer handles both “normal CSV” and the current “1-column embedded CSV” format)
   - TxDOT AADT stations (CSV): `TxDOT_AADT_Annuals_ALL.csv`
 - `data/silver/`
@@ -102,7 +103,7 @@ Outputs:
 
 ## Key assumptions / gotchas
 
-- **Collision vs traffic incident:** currently derived from the *filename* containing `collision`. If you want a stricter mapping, add an explicit map from `Issue Reported` → class.
+- **Collision vs traffic incident:** `event_class=collision` if the source filename contains `collision` *or* `Issue Reported` contains `crash`/`collis` (case-insensitive); otherwise `traffic_incident`.
 - **Weather join:** joined by hourly `bucket_start` (local “formatted_date” → hour bucket). A small fraction of incident buckets may not have weather rows.
 - **AADT exposure:** joined by nearest TxDOT station within `aadt_max_distance_km` (default 5 km). Cells without a nearby station get blank AADT fields.
 - **Gold rows are event-driven:** we currently emit rows only for hours where at least one incident occurred in that cell (not a full dense grid of all hours × all cells).

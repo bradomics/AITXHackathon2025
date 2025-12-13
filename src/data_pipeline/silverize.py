@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 from dataclasses import dataclass
 from pathlib import Path
+import re
 
 from util import parse_dt
 
@@ -24,8 +25,48 @@ def _is_incidents_csv(path: Path) -> bool:
     return "Traffic Report ID" in first
 
 
+_UNIFIED_SNAPSHOT_RE = re.compile(r".*_(\d{8})\.csv$", flags=re.IGNORECASE)
+
+
+def _select_incident_files(bronze_dir: Path) -> list[Path]:
+    """
+    Prefer the unified snapshot CSV if present:
+      Real-Time_Traffic_Incident_Reports_YYYYMMDD.csv
+    Otherwise fall back to the legacy per-category CSVs.
+    """
+
+    snapshots = sorted(bronze_dir.glob("Real-Time_Traffic_Incident_Reports_*.csv"))
+    snapshots = [p for p in snapshots if _is_incidents_csv(p)]
+    if snapshots:
+        dated: list[tuple[int, Path]] = []
+        undated: list[Path] = []
+        for p in snapshots:
+            m = _UNIFIED_SNAPSHOT_RE.match(p.name)
+            if not m:
+                undated.append(p)
+                continue
+            try:
+                dated.append((int(m.group(1)), p))
+            except ValueError:
+                undated.append(p)
+        if dated:
+            dated.sort(key=lambda x: x[0], reverse=True)
+            return [dated[0][1]]
+        undated.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+        return [undated[0]]
+
+    return sorted([p for p in bronze_dir.glob("*.csv") if _is_incidents_csv(p)])
+
+
+def _is_collision_issue(issue_reported: str) -> bool:
+    s = (issue_reported or "").strip().lower()
+    if not s:
+        return False
+    return ("crash" in s) or ("collis" in s)
+
+
 def silverize_incidents(*, bronze_dir: Path, out_path: Path, datetime_format: str) -> SilverizeIncidentsStats:
-    files = sorted([p for p in bronze_dir.glob("*.csv") if _is_incidents_csv(p)])
+    files = _select_incident_files(bronze_dir)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = [
@@ -51,7 +92,6 @@ def silverize_incidents(*, bronze_dir: Path, out_path: Path, datetime_format: st
         w.writeheader()
 
         for path in files:
-            event_class = "collision" if "collision" in path.name.lower() else "traffic_incident"
             with path.open("r", encoding="utf-8-sig", newline="") as f_in:
                 r = csv.DictReader(f_in)
                 for row in r:
@@ -72,6 +112,13 @@ def silverize_incidents(*, bronze_dir: Path, out_path: Path, datetime_format: st
                     except ValueError:
                         continue
 
+                    issue_reported = (row.get("Issue Reported") or "").strip()
+                    event_class = (
+                        "collision"
+                        if ("collision" in path.name.lower() or _is_collision_issue(issue_reported))
+                        else "traffic_incident"
+                    )
+
                     status_raw = (row.get("Status Date") or "").strip()
                     status_dt_str = ""
                     if status_raw:
@@ -84,7 +131,7 @@ def silverize_incidents(*, bronze_dir: Path, out_path: Path, datetime_format: st
                         {
                             "traffic_report_id": rid,
                             "published_date": published_dt.strftime(datetime_format),
-                            "issue_reported": (row.get("Issue Reported") or "").strip(),
+                            "issue_reported": issue_reported,
                             "event_class": event_class,
                             "latitude": (row.get("Latitude") or "").strip(),
                             "longitude": (row.get("Longitude") or "").strip(),
