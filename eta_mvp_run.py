@@ -55,6 +55,7 @@ def _run_gold(*, config_path: str) -> None:
         weather_hourly_csv=weather_path,
         aadt_stations_csv=aadt_path,
         out_csv=out_csv,
+        datetime_format=cfg.silverize.datetime_format,
         bucket_minutes=cfg.features.bucket_minutes,
         cell_round_decimals=cfg.features.cell_round_decimals,
         lookback_hours=cfg.features.lookback_hours,
@@ -92,6 +93,8 @@ def _run_tok(*, config_path: str) -> None:
         austin_center_lon=cfg.tokenizer.austin_center_lon,
         austin_radius_km=cfg.tokenizer.austin_radius_km,
         context_steps=cfg.train.context_steps,
+        datetime_format=cfg.silverize.datetime_format,
+        bucket_minutes=cfg.features.bucket_minutes,
     )
 
     print(
@@ -155,4 +158,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

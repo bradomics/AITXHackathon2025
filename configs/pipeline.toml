@@ -1,0 +1,30 @@
+[paths]
+bronze_dir = "data/bronze"
+silver_dir = "data/silver"
+gold_dir = "data/gold"
+weather_bronze_path = "data/bronze/austin_weather_training_data.csv"
+aadt_bronze_path = "data/bronze/TxDOT_AADT_Annuals_ALL.csv"
+
+[silverize]
+incidents_output_name = "incidents.csv"
+weather_output_name = "weather_hourly.csv"
+aadt_output_name = "aadt_stations.csv"
+datetime_format = "%Y-%m-%d %H:%M:%S"
+
+[features]
+bucket_minutes = 60
+cell_round_decimals = 3
+lookback_hours = [1, 3, 6, 24]
+label_horizon_hours = [1, 3, 6]
+aadt_max_distance_km = 5.0
+ema_half_life_hours = 6.0
+
+[tokenizer]
+h3_resolution = 8
+austin_center_lat = 30.2672
+austin_center_lon = -97.7431
+austin_radius_km = 30.0
+output_dir = "data/gold/tokens/h3_v1"
+
+[train]
+context_steps = 24
