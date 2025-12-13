@@ -1,30 +1,88 @@
 from __future__ import annotations
 
 import argparse
+import os
+import shutil
 import signal
 import subprocess
 import sys
+import getpass
+import socket
 from pathlib import Path
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="ETA SIM: run the digital twin server (Torch inference drives the sim).")
-    ap.add_argument("--engine", choices=["mock", "sumo"], default="mock")
-    ap.add_argument("--controls", default="sim/controls_counts_example_filled.json")
-    ap.add_argument("--model", default="sim/artifacts/demand_gru_counts.pt")
+    ap.add_argument("--engine", choices=["mock", "sumo"], default="sumo")
+    ap.add_argument("--controls", default="sim/controls_austin_radar_auto_filled.json")
+    ap.add_argument("--model", default="sim/artifacts/demand_gru_counts_austin.pt")
     ap.add_argument("--device", default="auto", help="auto|cpu|cuda")
-    ap.add_argument("--ws-host", default="0.0.0.0")
+    ap.add_argument("--ws-host", default="127.0.0.1")
     ap.add_argument("--ws-port", type=int, default=8765)
     ap.add_argument("--realtime", action="store_true")
     ap.add_argument("--max-intervals", type=int, default=0, help="0=run forever")
-    ap.add_argument("--sumo-cfg", default=None, help="Required for --engine sumo")
+    ap.add_argument("--sumo-cfg", default="sumo/austin/sim.sumocfg", help="Required for --engine sumo")
     ap.add_argument("--sumo-binary", default="sumo")
-    ap.add_argument("--sumo-step-s", type=float, default=1.0)
+    ap.add_argument("--sumo-step-s", type=float, default=0.1)
     ap.add_argument("--close-edge", action="append", default=[])
     ap.add_argument("--close-speed-mps", type=float, default=0.1)
     args = ap.parse_args()
 
     repo_root = Path(__file__).resolve().parent
+    if args.engine == "sumo":
+        requested = str(args.sumo_binary)
+        if requested in {"sumo", "sumo-gui"}:
+            sumo_home = os.environ.get("SUMO_HOME")
+            if sumo_home:
+                cand = Path(sumo_home) / "bin" / requested
+                if cand.exists():
+                    args.sumo_binary = str(cand)
+            if str(args.sumo_binary) == requested:
+                if sys.platform.startswith("win"):
+                    cand = repo_root / ".venv" / "Scripts" / f"{requested}.exe"
+                else:
+                    cand = repo_root / ".venv" / "bin" / requested
+                if cand.exists():
+                    args.sumo_binary = str(cand)
+            if str(args.sumo_binary) == requested:
+                cand = repo_root / ".cache" / "sumo" / "EclipseSUMO-1.25.0" / "bin" / requested
+                if cand.exists():
+                    args.sumo_binary = str(cand)
+
+        if shutil.which(str(args.sumo_binary)) is None:
+            raise SystemExit(
+                "SUMO binary not found (install SUMO, set SUMO_HOME, or pass --sumo-binary /path/to/sumo)."
+            )
+
+    controls_path = repo_root / str(args.controls)
+    if not controls_path.exists():
+        raise SystemExit(f"Controls file not found: {controls_path}")
+
+    model_path = repo_root / str(args.model)
+    if not model_path.exists():
+        raise SystemExit(
+            "\n".join(
+                [
+                    f"Model checkpoint not found: {model_path}",
+                    "Train one with `eta_sim_run.py` (see `sim/README.md`) or pass --model /path/to/checkpoint.pt.",
+                ]
+            )
+        )
+
+    ws_host = str(args.ws_host)
+    ws_port = int(args.ws_port)
+    ws_url = f"ws://{ws_host}:{ws_port}"
+    if ws_host in {"127.0.0.1", "localhost"}:
+        user = getpass.getuser()
+        host = socket.gethostname()
+        ssh_host = f"{host}.local" if "." not in host else host
+        ssh_cmd = f"ssh -N -L {ws_port}:localhost:{ws_port} {user}@{ssh_host}"
+        print(f"[eta_sim_go] ws publisher: {ws_url} (local-only)", flush=True)
+        print(f"[eta_sim_go] remote access: {ssh_cmd}", flush=True)
+        print(f"[eta_sim_go] then connect: ws://localhost:{ws_port}", flush=True)
+    else:
+        print(f"[eta_sim_go] ws publisher: {ws_url}", flush=True)
+
     venv_python = repo_root / ".venv" / "bin" / "python"
     python = str(venv_python) if venv_python.exists() else sys.executable
     cmd = [
@@ -33,9 +91,9 @@ def main() -> None:
         "--engine",
         args.engine,
         "--controls",
-        str(repo_root / args.controls),
+        str(controls_path),
         "--model",
-        str(repo_root / args.model),
+        str(model_path),
         "--device",
         str(args.device),
         "--ws-host",

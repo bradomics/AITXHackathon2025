@@ -5,3 +5,6 @@ pandas
 pytz
 h3
 torch
+websockets
+traci
+eclipse-sumo

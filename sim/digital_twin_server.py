@@ -143,9 +143,12 @@ async def main() -> None:
                     {"edge_id": s.edge_id, "veh_count": s.veh_count, "mean_speed_mps": s.mean_speed_mps}
                     for s in engine.edge_states()
                 ]
+                multipliers = {c.control_id: float(m) for c, m in zip(controls, mult, strict=True)}
                 payload = {
                     "ts": datetime.now().isoformat(timespec="seconds"),
                     "sim_time_s": float(getattr(engine, "sim_time_s", 0.0)),
+                    "control_interval_s": float(control_interval_s),
+                    "multipliers": multipliers,
                     "controls": [
                         {
                             "control_id": c.control_id,
