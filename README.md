@@ -124,3 +124,25 @@ Tokenizer and training are typically run via `eta_mvp_run.py`, but CLIs exist un
 .venv/bin/python eta_mvp_run.py --only-train
 .venv/bin/python src/model/infer_hotspot.py --config configs/pipeline.toml --forecast-csv data/bronze/austin_forecast_live.csv
 ```
+
+### Live inference loop
+
+`eta_mvp_go.py` fetches the live Open-Meteo forecast and re-runs hotspot inference on a loop (writes `output/phase1_output.json`).
+
+Configure loop interval in `.env`:
+
+```bash
+mvp_infer_loop_min=5
+```
+
+Run one cycle:
+
+```bash
+python3 eta_mvp_go.py --once
+```
+
+Run continuously:
+
+```bash
+python3 eta_mvp_go.py
+```

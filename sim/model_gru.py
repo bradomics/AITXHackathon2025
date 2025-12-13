@@ -47,9 +47,17 @@ def build_model(cfg: DemandGRUConfig):
 def save_checkpoint(path, *, model) -> None:
     import torch
 
+    state_dict = model.state_dict()
+    cpu_state_dict = {}
+    for k, v in state_dict.items():
+        if isinstance(v, torch.Tensor):
+            cpu_state_dict[k] = v.detach().cpu()
+        else:
+            cpu_state_dict[k] = v
+
     ckpt = {
         "config": asdict(model.cfg),
-        "state_dict": model.state_dict(),
+        "state_dict": cpu_state_dict,
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(ckpt, path)
@@ -64,4 +72,3 @@ def load_checkpoint(path, *, map_location: str | None = None):
     model.load_state_dict(ckpt["state_dict"])
     model.eval()
     return model
-
