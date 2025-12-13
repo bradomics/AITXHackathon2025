@@ -4,6 +4,7 @@ __pycache__/
 .venv/
 .cache/
 .cache.sqlite
+/data/bronze/
 /data/silver/
 /data/gold/
 
@@ -221,3 +222,5 @@ client/.env
 client/node_modules/
 client/dashboard/node_modules/
 
+/output/
+/artifacts/
