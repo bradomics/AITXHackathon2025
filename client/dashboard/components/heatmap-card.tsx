@@ -186,6 +186,67 @@ export function AustinHeatmapCard() {
     const [trip, setTrip] = useState<Trip | null>(null);
     const [currentTime, setCurrentTime] = useState(0);
 
+    const seenIncidentIdsRef = React.useRef<Set<string>>(new Set());
+
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const fetchIncidents = async () => {
+            try {
+                const res = await fetch(
+                    "https://data.austintexas.gov/resource/dx9v-zd7x.json?$order=published_date DESC&$limit=10"
+                );
+                if (!res.ok) return;
+
+                const incidents = await res.json();
+
+                if (!isMounted || !Array.isArray(incidents)) return;
+
+                const newOnes = [];
+
+                for (const incident of incidents) {
+                    const id = incident.traffic_report_id;
+                    if (!id) continue;
+
+                    if (!seenIncidentIdsRef.current.has(id)) {
+                        seenIncidentIdsRef.current.add(id);
+                        newOnes.push(incident);
+                    }
+                }
+
+                if (newOnes.length > 0) {
+                    // 🔔 ALERT / HANDLE NEW EVENTS HERE
+                    console.log("🚨 New traffic incidents:", newOnes);
+
+                    // Example: browser alert (replace later)
+                    newOnes.forEach((i) => {
+                        console.log(
+                            `[NEW] ${i.issue_reported} @ ${i.address} (${i.agency?.trim()})`
+                        );
+                    });
+
+                    // Optional: setState(newOnes) if you want to render them
+                }
+            } catch (err) {
+                // swallow network errors
+            }
+        };
+
+        // initial fetch
+        fetchIncidents();
+
+        // poll every minute
+        const intervalId = setInterval(fetchIncidents, 60_000);
+
+        return () => {
+            isMounted = false;
+            clearInterval(intervalId);
+        };
+    }, []);
+
+
+
     // -------- Heatmap stuff ---------
     const BASELINE_POINTS: HeatPoint[] = useMemo(() => makeAustinBaselineDense(0.005, 0.006), []);
     // const HOTSPOTS: HeatPoint[] = useMemo(
@@ -366,6 +427,40 @@ export function AustinHeatmapCard() {
     );
 
 
+    // Fetch the latest incidents every minute
+    useEffect(() => {
+        let isMounted = true;
+
+        const fetchIncidents = async () => {
+            try {
+                const res = await fetch(
+                    "https://data.austintexas.gov/resource/dx9v-zd7x.json?$order=published_date DESC&$limit=10"
+                );
+                if (!res.ok) return;
+
+                const data = await res.json();
+                if (isMounted) {
+                    console.log("Latest incidents:", data);
+                    // setState(data) if needed
+                }
+            } catch {
+                // ignore network errors
+            }
+        };
+
+        // run immediately
+        fetchIncidents();
+
+        // then every minute
+        const intervalId = setInterval(fetchIncidents, 60_000);
+
+        return () => {
+            isMounted = false;
+            clearInterval(intervalId);
+        };
+    }, []);
+
+
 
     useEffect(() => {
         const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -447,22 +542,22 @@ export function AustinHeatmapCard() {
 
     // optimized for browser performance
     useEffect(() => {
-    if (!trip) return;
-    let raf = 0;
-    let last = 0;
-    const start = performance.now();
-    const durationS = trip.timestamps.at(-1) ?? 20;
+        if (!trip) return;
+        let raf = 0;
+        let last = 0;
+        const start = performance.now();
+        const durationS = trip.timestamps.at(-1) ?? 20;
 
-    const tick = (t: number) => {
-        if (t - last > 400) { // last > 300 <--- increase this number to improve browser performance
-        last = t;
-        setCurrentTime(((t - start) / 1000) % durationS);
-        }
+        const tick = (t: number) => {
+            if (t - last > 400) { // last > 300 <--- increase this number to improve browser performance
+                last = t;
+                setCurrentTime(((t - start) / 1000) % durationS);
+            }
+            raf = requestAnimationFrame(tick);
+        };
+
         raf = requestAnimationFrame(tick);
-    };
-
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+        return () => cancelAnimationFrame(raf);
     }, [trip]);
 
 
