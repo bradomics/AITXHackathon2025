@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useState, useEffect } from "react";
 import Map from "react-map-gl/mapbox";
 import { NavigationControl } from "react-map-gl/mapbox";
 import { DeckGL } from "@deck.gl/react";
@@ -134,6 +135,13 @@ export function AustinHeatmapCard() {
         }),
     ];
 
+    const [mapView, setMapView] = useState(viewState);
+
+    const handleMapViewChange = (viewState: any) => {
+        alert(`here is the view state: ${viewState}`);
+        setMapView(viewState);
+    }
+
     return (
         <Card className="overflow-hidden p-0">
             <CardHeader className="p-6">
@@ -141,9 +149,9 @@ export function AustinHeatmapCard() {
                 <CardDescription className="pb-0 gap-0">Traffic Hotspots</CardDescription>
                 <div className="flex flex-col items-start pb-0">
                     <ButtonGroup>
-                        <Button variant="outline">Heatmap</Button>
-                        <Button variant="outline">Digital Twin</Button>
-                        <Button variant="outline">Composite View</Button>
+                        <Button onClick={() => { handleMapViewChange('heatmap'); }} variant="outline">Heatmap</Button>
+                        <Button onClick={() => { handleMapViewChange('digital-twin'); }} variant="outline">Digital Twin</Button>
+                        <Button onClick={() => { handleMapViewChange('composite-view'); }} variant="outline">Composite View</Button>
                     </ButtonGroup>
                 </div>
             </CardHeader>
