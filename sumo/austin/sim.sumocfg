@@ -1,0 +1,10 @@
+<configuration>
+  <input>
+    <net-file value="austin.net.xml"/>
+    <route-files value="routes.rou.xml"/>
+  </input>
+
+  <time>
+    <step-length value="0.1"/>
+  </time>
+</configuration>
