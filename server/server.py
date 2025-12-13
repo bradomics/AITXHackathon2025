@@ -1,100 +1,152 @@
 import asyncio
 import json
-import math
-import random
 import time
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Callable, Set
 
 import websockets
+
+import traci
+import sumolib
 
 
 @dataclass
 class Vehicle:
-    # JSON wants "vehicle-id" (kebab case), so we’ll map at serialization time.
-    vehicle_id: int
+    vehicle_id: str
     lat: float
     lon: float
-    heading: float  # degrees 0..359
+    heading: float
+    vtype: str
 
 
 def serialize_vehicles(vehicles: list[Vehicle]) -> str:
-    payload = {
-        "t": time.time(),
-        "vehicles": [
-            {
-                "vehicle-id": v.vehicle_id,
-                "lat": v.lat,
-                "lon": v.lon,
-                "heading": v.heading,
-            }
-            for v in vehicles
-        ],
-    }
-    return json.dumps(payload)
+    return json.dumps(
+        {
+            "t": time.time(),
+            "vehicles": [
+                {
+                    "vehicle-id": v.vehicle_id,
+                    "lat": v.lat,
+                    "lon": v.lon,
+                    "heading": v.heading,
+                    "type": v.vtype,
+                }
+                for v in vehicles
+            ],
+        }
+    )
 
 
-def advance_vehicle(v: Vehicle, dt: float) -> None:
+def make_linear_xy_to_lonlat(net: sumolib.net.Net) -> Callable[[float, float], tuple[float, float]]:
     """
-    Update position + heading with a tiny “wandering” motion.
-    dt: seconds since last update
+    Your net has projParameter="-" so sumolib can't do real projection math.
+    But it DOES include:
+      - convBoundary (network XY extents)
+      - origBoundary (lon/lat extents)
+    So we map XY -> lon/lat linearly. Good enough for visualization.
     """
-    # Randomly wiggle heading a bit
-    v.heading = (v.heading + random.uniform(-10, 10)) % 360
+    L = net._location  # contains strings for convBoundary/origBoundary/projParameter
 
-    # Move forward based on heading
-    speed_mps = random.uniform(2.0, 8.0)  # ~7–28 km/h
-    distance_m = speed_mps * dt
+    cx0, cy0, cx1, cy1 = map(float, L["convBoundary"].split(","))
+    olon0, olat0, olon1, olat1 = map(float, L["origBoundary"].split(","))
 
-    # Convert meters to degrees (rough approximation; good enough for demos)
-    meters_per_deg_lat = 111_320.0
-    meters_per_deg_lon = meters_per_deg_lat * math.cos(math.radians(v.lat))
+    # Precompute denominators to avoid divide-by-zero checks every call
+    dx = (cx1 - cx0) if (cx1 - cx0) != 0 else 1.0
+    dy = (cy1 - cy0) if (cy1 - cy0) != 0 else 1.0
 
-    dlat = (distance_m * math.cos(math.radians(v.heading))) / meters_per_deg_lat
-    dlon = (distance_m * math.sin(math.radians(v.heading))) / max(meters_per_deg_lon, 1e-6)
+    def xy_to_lonlat(x: float, y: float) -> tuple[float, float]:
+        tx = (x - cx0) / dx
+        ty = (y - cy0) / dy
+        lon = olon0 + tx * (olon1 - olon0)
+        lat = olat0 + ty * (olat1 - olat0)
+        return lon, lat
 
-    v.lat += dlat
-    v.lon += dlon
+    return xy_to_lonlat
 
 
-async def stream_loop(websocket, vehicles: list[Vehicle], hz: float = 5.0) -> None:
-    """
-    Continuously push vehicle states to the client.
-    """
+def snapshot_vehicles(xy_to_lonlat: Callable[[float, float], tuple[float, float]]) -> list[Vehicle]:
+    vids = traci.vehicle.getIDList()
+    out: list[Vehicle] = []
+
+    for vid in vids:
+        x, y = traci.vehicle.getPosition(vid)
+        lon, lat = xy_to_lonlat(x, y)
+
+        # SUMO angle: 0=N, 90=E, 180=S, 270=W
+        heading = float(traci.vehicle.getAngle(vid) % 360.0)
+        vtype = traci.vehicle.getTypeID(vid)
+
+        out.append(Vehicle(str(vid), float(lat), float(lon), heading, vtype))
+
+    return out
+
+
+async def broadcaster(
+    clients: Set[websockets.WebSocketServerProtocol],
+    hz: float,
+    xy_to_lonlat: Callable[[float, float], tuple[float, float]],
+) -> None:
     interval = 1.0 / hz
-    last = time.perf_counter()
 
     while True:
-        now = time.perf_counter()
-        dt = now - last
-        last = now
+        # Advance SUMO one step
+        traci.simulationStep()
 
-        for v in vehicles:
-            advance_vehicle(v, dt)
+        # Snapshot + serialize once
+        msg = serialize_vehicles(snapshot_vehicles(xy_to_lonlat))
 
-        await websocket.send(serialize_vehicles(vehicles))
+        # Broadcast
+        if clients:
+            dead = []
+            for ws in clients:
+                try:
+                    await ws.send(msg)
+                except Exception:
+                    dead.append(ws)
+            for ws in dead:
+                clients.discard(ws)
+
         await asyncio.sleep(interval)
 
 
-async def handler(websocket):
-    # Initial demo vehicles near Austin
-    vehicles = [
-        Vehicle(vehicle_id=1, lat=30.2050, lon=-97.7664, heading=180),
-        Vehicle(vehicle_id=2, lat=30.2100, lon=-97.7700, heading=90),
-        Vehicle(vehicle_id=3, lat=30.2150, lon=-97.7750, heading=270),
-    ]
-
+async def handler(websocket: websockets.WebSocketServerProtocol, clients: Set[websockets.WebSocketServerProtocol]):
+    clients.add(websocket)
     try:
-        await stream_loop(websocket, vehicles, hz=10.0)  # 10 updates/sec
-    except websockets.ConnectionClosed:
-        pass
+        await websocket.wait_closed()
+    finally:
+        clients.discard(websocket)
 
 
 async def main():
-    host = "0.0.0.0"
-    port = 8765
-    async with websockets.serve(handler, host, port, ping_interval=20, ping_timeout=20):
-        print(f"WebSocket server running on ws://{host}:{port}")
-        await asyncio.Future()  # run forever
+    # ---- CONFIG ----
+    TRACI_HOST = "localhost"
+    TRACI_PORT = 8813
+    WS_HOST = "0.0.0.0"
+    WS_PORT = 8765
+    HZ = 10.0
+
+    NET_PATH = Path("/Users/brad/sumo_osm/austin/austin.net.xml").resolve()
+
+    # Load net (needed only for the linear mapping boundaries)
+    net = sumolib.net.readNet(NET_PATH.as_uri())
+    xy_to_lonlat = make_linear_xy_to_lonlat(net)
+
+    # Connect to already-running SUMO that was started with: --remote-port 8813
+    # Use init() because we call global traci.* methods.
+    traci.init(port=TRACI_PORT, host=TRACI_HOST)
+
+    clients: Set[websockets.WebSocketServerProtocol] = set()
+
+    async with websockets.serve(
+        lambda ws: handler(ws, clients),
+        WS_HOST,
+        WS_PORT,
+        ping_interval=20,
+        ping_timeout=20,
+    ):
+        print(f"WebSocket server running on ws://{WS_HOST}:{WS_PORT}")
+        await broadcaster(clients, HZ, xy_to_lonlat)
 
 
 if __name__ == "__main__":
