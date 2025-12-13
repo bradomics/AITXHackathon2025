@@ -4,6 +4,8 @@ __pycache__/
 .venv/
 .cache/
 .cache.sqlite
+/data/bronze/
 /data/silver/
 /data/gold/
-
+/output/
+/artifacts/
