@@ -18,14 +18,14 @@ import "mapbox-gl/dist/mapbox-gl.css";
 
 type HeatPoint = { position: [number, number]; weight?: number };
 
-type VehicleType = "ambulance" | "police" | "red-car" | "sports-car";
+type VehicleType = "ambulance" | "police" | "red-car" | "sports-car" | "cybertruck";
 
 /**
  * Keep this permissive: backend may omit or send unexpected type strings.
  * We'll normalize on ingest.
  */
 type Vehicle = {
-    "vehicle-id": number;
+    "vehicle-id": string | number;
     lat: number;
     lon: number;
     heading: number; // degrees
@@ -54,29 +54,65 @@ function makeAustinBaselineDense(weight = 0.005, step = 0.006): HeatPoint[] {
     return pts;
 }
 
-function normalizeVehicleType(raw: unknown, vehicleId?: number): VehicleType {
-    const t = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+// function normalizeVehicleType(raw: unknown, vehicleId?: number): VehicleType {
+//     const t = typeof raw === "string" ? raw.trim().toLowerCase() : "";
 
-    // Exact matches
-    if (t === "ambulance") return "ambulance";
-    if (t === "police") return "police";
-    if (t === "red-car") return "red-car";
-    if (t === "sports-car") return "sports-car";
+//     // Exact matches
+//     if (t === "ambulance") return "ambulance";
+//     if (t === "police") return "police";
+//     if (t === "red-car") return "red-car";
+//     if (t === "sports-car") return "sports-car";
 
-    // Common variants
-    if (t === "police-car" || t === "policecar" || t === "cop") return "police";
-    if (t === "red_car" || t === "redcar" || t === "car" || t === "sedan") return "red-car";
-    if (t === "ambulance-car" || t === "ems") return "ambulance";
-    if (t === "sports-car" || t === "ems") return "sports-car";
+//     // Common variants
+//     if (t === "police-car" || t === "policecar" || t === "cop") return "police";
+//     if (t === "red_car" || t === "redcar" || t === "car" || t === "sedan") return "red-car";
+//     if (t === "ambulance-car" || t === "ems") return "ambulance";
+//     if (t === "sports-car" || t === "ems") return "sports-car";
 
 
-    // Deterministic fallback (so you see a mix even if backend forgets type)
-    if (typeof vehicleId === "number") {
-        const mod = vehicleId % 3;
-        return mod === 0 ? "ambulance" : mod === 1 ? "police" : mod === 2 ? "red-car" : "sports-car";
-    }
+//     // Deterministic fallback (so you see a mix even if backend forgets type)
+//     if (typeof vehicleId === "number") {
+//         const mod = vehicleId % 3;
+//         return mod === 0 ? "ambulance" : mod === 1 ? "police" : mod === 2 ? "red-car" : "sports-car";
+//     }
 
-    return "red-car";
+//     return "red-car";
+// }
+
+function normalizeVehicleType(raw: unknown, vehicleId?: any): VehicleType {
+  const t = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+
+  const idNum =
+  typeof vehicleId === "number" ? vehicleId :
+  typeof vehicleId === "string" ? parseInt(vehicleId.replace(/\D+/g, ""), 10) :
+  undefined;
+
+  // Exact matches from backend
+  if (t === "ambulance") return "ambulance";
+  if (t === "police") return "police";
+  if (t === "red-car" || t === "redcar" || t === "red_car") return "red-car";
+  if (t === "sports-car" || t === "sportscar" || t === "sports_car") return "sports-car";
+  if (t === "cybertruck") return "cybertruck";
+
+  // Common SUMO-ish / generic variants
+  if (t === "police-car" || t === "policecar" || t === "cop") return "police";
+  if (t === "ambulance-car" || t === "ems") return "ambulance";
+
+  // If SUMO sends "passenger", "truck", etc, map them:
+  if (t === "passenger" || t === "car" || t === "sedan") return "red-car";
+  if (t === "truck" || t === "delivery") return "cybertruck";
+
+  // Deterministic fallback
+  if (typeof idNum === "number") {
+    const mod = idNum % 10;
+    if (mod === 0) return "ambulance";
+    if (mod === 1) return "police";
+    if (mod <= 6) return "red-car";       // ~60%
+    if (mod <= 8) return "sports-car";    // ~20%
+    return "cybertruck";                  // ~20%
+  }
+
+  return "red-car";
 }
 
 export function AustinHeatmapCard() {
@@ -130,13 +166,21 @@ export function AustinHeatmapCard() {
     // --- Digital twin layers (multiple types) ---
     const digitalTwinLayers = useMemo(() => {
         // Per-model offsets/scales. Tweak yawOffset/pitch/roll to match your GLB "forward".
-        const MODEL: Record<VehicleType, { url: string; sizeScale: number; yawOffset: number; flip: number; pitch: number; roll: number }> =
-        {
-            ambulance: { url: "/models/ambulance.glb", sizeScale: 20, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
-            police: { url: "/models/police-car.glb", sizeScale: 100, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
-            "red-car": { url: "/models/red-car.glb", sizeScale: 5, yawOffset: 270, flip: 0, pitch: 0, roll: 90 },
-            "sports-car": { url: "/models/sports-car.glb", sizeScale: 2000, yawOffset: 0, flip: 0, pitch: 0, roll: 0 },
+        // const MODEL: Record<VehicleType, { url: string; sizeScale: number; yawOffset: number; flip: number; pitch: number; roll: number }> =
+        // {
+        //     ambulance: { url: "/models/ambulance.glb", sizeScale: 20, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
+        //     police: { url: "/models/police-car.glb", sizeScale: 100, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
+        //     "red-car": { url: "/models/red-car.glb", sizeScale: 5, yawOffset: 270, flip: 0, pitch: 0, roll: 90 },
+        //     "sports-car": { url: "/models/sports-car.glb", sizeScale: 2000, yawOffset: 0, flip: 0, pitch: 0, roll: 0 },
 
+        // };
+
+        const MODEL: Record<VehicleType, { url: string; sizeScale: number; yawOffset: number; flip: number; pitch: number; roll: number }> = {
+        ambulance: { url: "/models/ambulance.glb", sizeScale: 1, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
+        police: { url: "/models/police-car.glb", sizeScale: 2, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
+        "red-car": { url: "/models/red-car.glb", sizeScale: 10, yawOffset: 270, flip: 0, pitch: 0, roll: 90 },
+        "sports-car": { url: "/models/sports-car.glb", sizeScale: 5, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
+        cybertruck: { url: "/models/cybertruck.glb", sizeScale: 10, yawOffset: 0, flip: 0, pitch: 0, roll: 0 },
         };
 
         const mkLayer = (type: VehicleType) => {
@@ -159,7 +203,7 @@ export function AustinHeatmapCard() {
             });
         };
 
-        return [mkLayer("ambulance"), mkLayer("police"), mkLayer("red-car"), mkLayer("sports-car")];
+        return [mkLayer("ambulance"), mkLayer("police"), mkLayer("red-car"), mkLayer("sports-car"), mkLayer("cybertruck")];
     }, [vehicles]);
 
     // Only connect WS when digital-twin is selected
