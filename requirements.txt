@@ -1,0 +1,7 @@
+openmeteo-requests
+requests-cache
+retry-requests
+pandas
+pytz
+h3
+torch

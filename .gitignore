@@ -1,3 +1,14 @@
+# Backend
+.DS_Store
+__pycache__/
+*.py[cod]
+.venv/
+.cache/
+.cache.sqlite
+./data/silver/
+./data/gold/
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

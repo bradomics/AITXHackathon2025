@@ -1,0 +1,158 @@
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+from traffic_pipeline.aadt import silverize_aadt_stations
+from traffic_pipeline.config import load_config
+from traffic_pipeline.feature_factory import build_hotspot_features
+from traffic_pipeline.silverize import silverize_incidents
+from traffic_pipeline.weather import silverize_weather_hourly
+
+
+def _run_silver(*, config_path: str) -> None:
+    cfg = load_config(config_path)
+
+    incidents_path = cfg.paths.silver_dir / cfg.silverize.incidents_output_name
+    weather_path = cfg.paths.silver_dir / cfg.silverize.weather_output_name
+    aadt_path = cfg.paths.silver_dir / cfg.silverize.aadt_output_name
+
+    stats_inc = silverize_incidents(
+        bronze_dir=cfg.paths.bronze_dir,
+        out_path=incidents_path,
+        datetime_format=cfg.silverize.datetime_format,
+    )
+    print(f"[silver] incidents files={stats_inc.input_files} rows={stats_inc.output_rows} -> {incidents_path}")
+
+    stats_w = silverize_weather_hourly(
+        bronze_path=cfg.paths.weather_bronze_path,
+        out_path=weather_path,
+        datetime_format=cfg.silverize.datetime_format,
+        bucket_minutes=cfg.features.bucket_minutes,
+    )
+    print(f"[silver] weather rows={stats_w.output_rows} -> {weather_path}")
+
+    stats_a = silverize_aadt_stations(
+        bronze_path=cfg.paths.aadt_bronze_path,
+        out_path=aadt_path,
+    )
+    print(f"[silver] aadt stations={stats_a.unique_stations} -> {aadt_path}")
+
+
+def _run_gold(*, config_path: str) -> None:
+    cfg = load_config(config_path)
+
+    incidents_path = cfg.paths.silver_dir / cfg.silverize.incidents_output_name
+    weather_path = cfg.paths.silver_dir / cfg.silverize.weather_output_name
+    aadt_path = cfg.paths.silver_dir / cfg.silverize.aadt_output_name
+    out_csv = cfg.paths.gold_dir / "features" / "hotspot_features.csv"
+
+    if not incidents_path.exists():
+        raise FileNotFoundError(incidents_path)
+
+    stats = build_hotspot_features(
+        silver_incidents_csv=incidents_path,
+        weather_hourly_csv=weather_path,
+        aadt_stations_csv=aadt_path,
+        out_csv=out_csv,
+        bucket_minutes=cfg.features.bucket_minutes,
+        cell_round_decimals=cfg.features.cell_round_decimals,
+        lookback_hours=cfg.features.lookback_hours,
+        label_horizon_hours=cfg.features.label_horizon_hours,
+        aadt_max_distance_km=cfg.features.aadt_max_distance_km,
+        ema_half_life_hours=cfg.features.ema_half_life_hours,
+    )
+
+    print(
+        "[gold] "
+        f"out_rows={stats.output_rows} cells={stats.unique_cells} cell_buckets={stats.unique_cell_buckets} -> {out_csv}"
+    )
+
+
+def _run_tok(*, config_path: str) -> None:
+    cfg = load_config(config_path)
+
+    incidents_csv = cfg.paths.silver_dir / cfg.silverize.incidents_output_name
+    weather_csv = cfg.paths.silver_dir / cfg.silverize.weather_output_name
+    out_dir = cfg.tokenizer.output_dir
+
+    if not incidents_csv.exists():
+        raise FileNotFoundError(incidents_csv)
+    if not weather_csv.exists():
+        raise FileNotFoundError(weather_csv)
+
+    from traffic_pipeline.tokenizer_h3 import tokenize_h3_time_series
+
+    stats = tokenize_h3_time_series(
+        incidents_csv=incidents_csv,
+        weather_hourly_csv=weather_csv,
+        out_dir=out_dir,
+        h3_resolution=cfg.tokenizer.h3_resolution,
+        austin_center_lat=cfg.tokenizer.austin_center_lat,
+        austin_center_lon=cfg.tokenizer.austin_center_lon,
+        austin_radius_km=cfg.tokenizer.austin_radius_km,
+        context_steps=cfg.train.context_steps,
+    )
+
+    print(
+        "[tok] "
+        f"t={stats.n_time_steps} cells={stats.n_cells} "
+        f"coll_events={stats.collisions_events} inc_events={stats.traffic_incidents_events} -> {out_dir}"
+    )
+
+
+def _run_train(*, config_path: str) -> None:
+    cfg = load_config(config_path)
+
+    data_dir = cfg.tokenizer.output_dir
+    ds_path = data_dir / "dataset.npz"
+    meta_path = data_dir / "meta.json"
+    if not ds_path.exists():
+        raise FileNotFoundError(ds_path)
+    if not meta_path.exists():
+        raise FileNotFoundError(meta_path)
+
+    from traffic_pipeline.train_hotspot import train_hotspot_model
+
+    out_path = Path("artifacts/h3_hotspot_model.pt")
+    train_hotspot_model(
+        data_dir=data_dir,
+        out_path=out_path,
+        context_steps=cfg.train.context_steps,
+    )
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description="ETA MVP: bronze -> silver -> gold -> tokenize -> train")
+    ap.add_argument("--config", default="configs/pipeline.toml")
+
+    g = ap.add_mutually_exclusive_group()
+    g.add_argument("--only-silver", action="store_true", help="Run bronze -> silver only")
+    g.add_argument("--only-gold", action="store_true", help="Run silver -> gold only")
+    g.add_argument("--only-tok", action="store_true", help="Run tokenizer only")
+    g.add_argument("--only-train", action="store_true", help="Run training only")
+
+    args = ap.parse_args()
+
+    if args.only_silver:
+        _run_silver(config_path=args.config)
+        return
+    if args.only_gold:
+        _run_gold(config_path=args.config)
+        return
+    if args.only_tok:
+        _run_tok(config_path=args.config)
+        return
+    if args.only_train:
+        _run_train(config_path=args.config)
+        return
+
+    _run_silver(config_path=args.config)
+    _run_gold(config_path=args.config)
+    _run_tok(config_path=args.config)
+    _run_train(config_path=args.config)
+
+
+if __name__ == "__main__":
+    main()
+
