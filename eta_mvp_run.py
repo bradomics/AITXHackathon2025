@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import os
 import sys
 from pathlib import Path
 
@@ -16,6 +17,45 @@ from data_pipeline.weather import silverize_weather_hourly
 
 def _has_module(name: str) -> bool:
     return importlib.util.find_spec(name) is not None
+
+
+def _venv_python() -> Path | None:
+    root = Path(__file__).resolve().parent
+    if sys.platform.startswith("win"):
+        cand = root / ".venv" / "Scripts" / "python.exe"
+    else:
+        cand = root / ".venv" / "bin" / "python"
+    return cand if cand.exists() else None
+
+
+def _maybe_reexec_into_venv(*, required_modules: list[str]) -> None:
+    if os.environ.get("ETA_MVP_REEXEC") == "1":
+        return
+
+    missing = sorted({m for m in required_modules if not _has_module(m)})
+    if not missing:
+        return
+
+    venv_py = _venv_python()
+    if venv_py is None:
+        return
+
+    try:
+        current_py = Path(sys.executable).resolve()
+    except FileNotFoundError:
+        current_py = Path(sys.executable)
+
+    if current_py == venv_py.resolve():
+        return
+
+    env = os.environ.copy()
+    env["ETA_MVP_REEXEC"] = "1"
+    print(f"[env] missing {', '.join(missing)}; re-exec -> {venv_py}", flush=True)
+    os.execve(
+        str(venv_py),
+        [str(venv_py), str(Path(__file__).resolve()), *sys.argv[1:]],
+        env,
+    )
 
 
 def _exit_missing_deps(*, stage: str, missing: str) -> "NoReturn":
@@ -171,6 +211,16 @@ def main() -> None:
     g.add_argument("--only-train", action="store_true", help="Run training only")
 
     args = ap.parse_args()
+
+    required_modules: list[str] = []
+    if args.only_tok:
+        required_modules = ["h3", "numpy"]
+    elif args.only_train:
+        required_modules = ["torch", "numpy"]
+    elif not (args.only_silver or args.only_gold or args.only_etl):
+        required_modules = ["h3", "numpy", "torch"]
+
+    _maybe_reexec_into_venv(required_modules=required_modules)
 
     if args.only_silver:
         _run_silver(config_path=args.config)
