@@ -101,6 +101,7 @@ async def broadcaster(
             dead = []
             for ws in clients:
                 try:
+                    print(msg)
                     await ws.send(msg)
                 except Exception:
                     dead.append(ws)

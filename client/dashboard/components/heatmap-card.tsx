@@ -80,39 +80,39 @@ function makeAustinBaselineDense(weight = 0.005, step = 0.006): HeatPoint[] {
 // }
 
 function normalizeVehicleType(raw: unknown, vehicleId?: any): VehicleType {
-  const t = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+    const t = typeof raw === "string" ? raw.trim().toLowerCase() : "";
 
-  const idNum =
-  typeof vehicleId === "number" ? vehicleId :
-  typeof vehicleId === "string" ? parseInt(vehicleId.replace(/\D+/g, ""), 10) :
-  undefined;
+    const idNum =
+        typeof vehicleId === "number" ? vehicleId :
+            typeof vehicleId === "string" ? parseInt(vehicleId.replace(/\D+/g, ""), 10) :
+                undefined;
 
-  // Exact matches from backend
-  if (t === "ambulance") return "ambulance";
-  if (t === "police") return "police";
-  if (t === "red-car" || t === "redcar" || t === "red_car") return "red-car";
-  if (t === "sports-car" || t === "sportscar" || t === "sports_car") return "sports-car";
-  if (t === "cybertruck") return "cybertruck";
+    // Exact matches from backend
+    if (t === "ambulance") return "ambulance";
+    if (t === "police") return "police";
+    if (t === "red-car" || t === "redcar" || t === "red_car") return "red-car";
+    if (t === "sports-car" || t === "sportscar" || t === "sports_car") return "sports-car";
+    if (t === "cybertruck") return "cybertruck";
 
-  // Common SUMO-ish / generic variants
-  if (t === "police-car" || t === "policecar" || t === "cop") return "police";
-  if (t === "ambulance-car" || t === "ems") return "ambulance";
+    // Common SUMO-ish / generic variants
+    if (t === "police-car" || t === "policecar" || t === "cop") return "police";
+    if (t === "ambulance-car" || t === "ems") return "ambulance";
 
-  // If SUMO sends "passenger", "truck", etc, map them:
-  if (t === "passenger" || t === "car" || t === "sedan") return "red-car";
-  if (t === "truck" || t === "delivery") return "cybertruck";
+    // If SUMO sends "passenger", "truck", etc, map them:
+    if (t === "passenger" || t === "car" || t === "sedan") return "red-car";
+    if (t === "truck" || t === "delivery") return "cybertruck";
 
-  // Deterministic fallback
-  if (typeof idNum === "number") {
-    const mod = idNum % 10;
-    if (mod === 0) return "ambulance";
-    if (mod === 1) return "police";
-    if (mod <= 6) return "red-car";       // ~60%
-    if (mod <= 8) return "sports-car";    // ~20%
-    return "cybertruck";                  // ~20%
-  }
+    // Deterministic fallback
+    if (typeof idNum === "number") {
+        const mod = idNum % 10;
+        if (mod === 0) return "ambulance";
+        if (mod === 1) return "police";
+        if (mod <= 6) return "red-car";       // ~60%
+        if (mod <= 8) return "sports-car";    // ~20%
+        return "cybertruck";                  // ~20%
+    }
 
-  return "red-car";
+    return "red-car";
 }
 
 export function AustinHeatmapCard() {
@@ -122,16 +122,144 @@ export function AustinHeatmapCard() {
 
     // --- Heatmap layers ---
     const BASELINE_POINTS: HeatPoint[] = useMemo(() => makeAustinBaselineDense(0.005, 0.006), []);
-    const HOTSPOTS: HeatPoint[] = useMemo(
-        () => [
-            { position: [-97.7431, 30.2672], weight: 1.2 },
-            { position: [-97.768, 30.285], weight: 0.9 },
-            { position: [-97.7219, 30.2849], weight: 0.7 },
-            { position: [-97.7, 30.26], weight: 1.0 },
-            { position: [-97.75, 30.24], weight: 1.4 },
-        ],
-        []
-    );
+    // const HOTSPOTS: HeatPoint[] = useMemo(
+    //     () => [
+    //         { position: [-97.7431, 30.2672], weight: 1.2 },
+    //         { position: [-97.768, 30.285], weight: 0.9 },
+    //         { position: [-97.7219, 30.2849], weight: 0.7 },
+    //         { position: [-97.7, 30.26], weight: 1.0 },
+    //         { position: [-97.75, 30.24], weight: 1.4 },
+    //     ],
+    //     []
+    // );
+
+    // Generated 2025-12-13T12:39:37
+    // target_bucket=2025-12-13T13:00:00
+    const COLLISION_POINTS: HeatPoint[] = [
+        { position: [-97.665321, 30.449991], weight: 0.582160 },
+        { position: [-97.536064, 30.346228], weight: 0.451347 },
+        { position: [-97.660706, 30.457869], weight: 0.437221 },
+        { position: [-97.666298, 30.465401], weight: 0.435874 },
+        { position: [-97.670921, 30.457523], weight: 0.424278 },
+        { position: [-97.556465, 30.345551], weight: 0.416964 },
+        { position: [-97.669937, 30.442114], weight: 0.411175 },
+        { position: [-97.693146, 30.163204], weight: 0.404382 },
+        { position: [-97.605309, 30.228052], weight: 0.313027 },
+        { position: [-97.674561, 30.434235], weight: 0.305027 },
+        { position: [-97.525864, 30.346565], weight: 0.299816 },
+        { position: [-97.671791, 30.148493], weight: 0.294711 },
+        { position: [-97.834869, 30.142717], weight: 0.280970 },
+        { position: [-97.546265, 30.345890], weight: 0.267719 },
+        { position: [-97.607246, 30.258886], weight: 0.249486 },
+        { position: [-97.601662, 30.251352], weight: 0.246917 },
+        { position: [-97.820450, 30.236010], weight: 0.227800 },
+        { position: [-97.726616, 30.447903], weight: 0.223450 },
+        { position: [-97.592651, 30.352060], weight: 0.201729 },
+        { position: [-97.566666, 30.345209], weight: 0.190156 },
+        { position: [-97.692863, 30.078184], weight: 0.187783 },
+        { position: [-97.723724, 30.162134], weight: 0.180282 },
+        { position: [-97.689926, 30.031897], weight: 0.180232 },
+        { position: [-97.576866, 30.344868], weight: 0.178604 },
+        { position: [-97.576103, 30.414383], weight: 0.172381 },
+        { position: [-97.769096, 30.152802], weight: 0.171548 },
+        { position: [-97.682953, 30.163561], weight: 0.169115 },
+        { position: [-97.655106, 30.450336], weight: 0.167978 },
+        { position: [-97.527779, 30.377384], weight: 0.165940 },
+        { position: [-97.637589, 30.172861], weight: 0.165885 },
+        { position: [-97.690369, 30.441420], weight: 0.162103 },
+        { position: [-97.928024, 30.394470], weight: 0.159165 },
+        { position: [-97.626907, 30.327736], weight: 0.158630 },
+        { position: [-97.652382, 30.164621], weight: 0.153525 },
+        { position: [-97.824440, 30.297703], weight: 0.151239 },
+        { position: [-97.813484, 30.128021], weight: 0.148989 },
+        { position: [-97.591469, 30.251698], weight: 0.147368 },
+        { position: [-97.825058, 30.228115], weight: 0.145150 },
+        { position: [-97.657516, 30.326694], weight: 0.143421 },
+        { position: [-97.607986, 30.189331], weight: 0.137834 },
+        { position: [-97.623024, 30.266075], weight: 0.135643 },
+        { position: [-97.585892, 30.244162], weight: 0.135167 },
+        { position: [-97.797424, 30.275475], weight: 0.131231 },
+        { position: [-97.647560, 30.411985], weight: 0.128493 },
+        { position: [-97.615501, 30.227705], weight: 0.127506 },
+        { position: [-97.541290, 30.183868], weight: 0.127092 },
+        { position: [-97.747055, 30.447199], weight: 0.124411 },
+        { position: [-97.618179, 30.188982], weight: 0.123049 },
+        { position: [-97.683929, 30.178984], weight: 0.122746 },
+        { position: [-97.621315, 30.320202], weight: 0.120976 },
+    ];
+
+    const INCIDENT_POINTS: HeatPoint[] = [
+        { position: [-97.735214, 30.262203], weight: 0.400909 },
+        { position: [-97.740807, 30.269735], weight: 0.398782 },
+        { position: [-97.695679, 30.364008], weight: 0.318901 },
+        { position: [-97.751015, 30.269379], weight: 0.293355 },
+        { position: [-97.766472, 30.191547], weight: 0.281844 },
+        { position: [-97.730606, 30.270092], weight: 0.273627 },
+        { position: [-97.745415, 30.261848], weight: 0.267062 },
+        { position: [-97.790482, 30.167503], weight: 0.249672 },
+        { position: [-97.707558, 30.309525], weight: 0.248548 },
+        { position: [-97.768448, 30.222397], weight: 0.244395 },
+        { position: [-97.690086, 30.356476], weight: 0.236192 },
+        { position: [-97.699310, 30.340710], weight: 0.233938 },
+        { position: [-97.752655, 30.215223], weight: 0.193987 },
+        { position: [-97.669937, 30.442114], weight: 0.193754 },
+        { position: [-97.676239, 30.380121], weight: 0.184585 },
+        { position: [-97.723045, 30.231718], weight: 0.183032 },
+        { position: [-97.755615, 30.261490], weight: 0.182601 },
+        { position: [-97.800140, 30.476254], weight: 0.175804 },
+        { position: [-97.715111, 30.347891], weight: 0.174635 },
+        { position: [-97.734230, 30.246782], weight: 0.167197 },
+        { position: [-97.651207, 30.388695], weight: 0.166357 },
+        { position: [-97.739822, 30.254316], weight: 0.161166 },
+        { position: [-97.704216, 30.417780], weight: 0.160737 },
+        { position: [-97.641968, 30.404451], weight: 0.160495 },
+        { position: [-97.728638, 30.239250], weight: 0.159232 },
+        { position: [-97.672600, 30.403414], weight: 0.156963 },
+        { position: [-97.716095, 30.363306], weight: 0.151409 },
+        { position: [-97.794533, 30.468725], weight: 0.149707 },
+        { position: [-97.744087, 30.400961], weight: 0.146887 },
+        { position: [-97.776672, 30.191187], weight: 0.146134 },
+        { position: [-97.766815, 30.276552], weight: 0.143992 },
+        { position: [-97.661156, 30.303396], weight: 0.143786 },
+        { position: [-97.708534, 30.324942], weight: 0.142158 },
+        { position: [-97.712166, 30.301640], weight: 0.140387 },
+        { position: [-97.691063, 30.371889], weight: 0.140038 },
+        { position: [-97.725998, 30.277981], weight: 0.138144 },
+        { position: [-97.678200, 30.410946], weight: 0.136959 },
+        { position: [-97.703926, 30.332827], weight: 0.135578 },
+        { position: [-97.741798, 30.285156], weight: 0.135209 },
+        { position: [-97.750023, 30.253958], weight: 0.129883 },
+        { position: [-97.686447, 30.379772], weight: 0.129707 },
+        { position: [-97.743446, 30.231005], weight: 0.128366 },
+        { position: [-97.746407, 30.277267], weight: 0.124138 },
+        { position: [-97.743103, 30.385546], weight: 0.123019 },
+        { position: [-97.826668, 30.173941], weight: 0.121859 },
+        { position: [-97.668961, 30.426702], weight: 0.119423 },
+        { position: [-97.761871, 30.199440], weight: 0.119127 },
+        { position: [-97.721695, 30.370836], weight: 0.117396 },
+        { position: [-97.758247, 30.222755], weight: 0.116516 },
+        { position: [-97.775681, 30.175760], weight: 0.115650 },
+    ];
+
+    // RGBA stops (0-255). First stop is lowest intensity, last is hottest.
+    const COLLISION_COLOR_RANGE: [number, number, number, number][] = [
+    [255, 80, 80, 0],
+    [255, 80, 80, 40],
+    [255, 80, 80, 90],
+    [255, 80, 80, 140],
+    [255, 80, 80, 200],
+    [255, 80, 80, 255],
+    ];
+
+    const INCIDENT_COLOR_RANGE: [number, number, number, number][] = [
+    [80, 200, 255, 0],
+    [80, 200, 255, 40],
+    [80, 200, 255, 90],
+    [80, 200, 255, 140],
+    [80, 200, 255, 200],
+    [80, 200, 255, 255],
+    ];
+
 
     const heatmapLayers = useMemo(
         () => [
@@ -146,17 +274,29 @@ export function AustinHeatmapCard() {
                 aggregation: "SUM",
             }),
             new HeatmapLayer<HeatPoint>({
-                id: "austin-hotspots",
-                data: HOTSPOTS,
+                id: "austin-incident-points",
+                data: INCIDENT_POINTS,
                 getPosition: (d) => d.position,
                 getWeight: (d) => d.weight ?? 1,
-                radiusPixels: 45,
-                intensity: 1.3,
+                radiusPixels: 50,
+                intensity: 1,
                 threshold: 0.03,
                 aggregation: "SUM",
+                colorRange: INCIDENT_COLOR_RANGE,
+            }),
+            new HeatmapLayer<HeatPoint>({
+                id: "austin-collision-hotspots",
+                data: COLLISION_POINTS,
+                getPosition: (d) => d.position,
+                getWeight: (d) => d.weight ?? 1,
+                radiusPixels: 50,
+                intensity: 1,
+                threshold: 0.03,
+                aggregation: "SUM",
+                colorRange: COLLISION_COLOR_RANGE,
             }),
         ],
-        [BASELINE_POINTS, HOTSPOTS]
+        [BASELINE_POINTS, INCIDENT_POINTS, COLLISION_POINTS]
     );
 
     function sumoAngleToDeckYaw(angle: number) {
@@ -176,11 +316,11 @@ export function AustinHeatmapCard() {
         // };
 
         const MODEL: Record<VehicleType, { url: string; sizeScale: number; yawOffset: number; flip: number; pitch: number; roll: number }> = {
-        ambulance: { url: "/models/ambulance.glb", sizeScale: 1, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
-        police: { url: "/models/police-car.glb", sizeScale: 2, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
-        "red-car": { url: "/models/red-car.glb", sizeScale: 10, yawOffset: 270, flip: 0, pitch: 0, roll: 90 },
-        "sports-car": { url: "/models/sports-car.glb", sizeScale: 5, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
-        cybertruck: { url: "/models/cybertruck.glb", sizeScale: 10, yawOffset: 0, flip: 0, pitch: 0, roll: 0 },
+            ambulance: { url: "/models/ambulance.glb", sizeScale: 1, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
+            police: { url: "/models/police-car.glb", sizeScale: 5, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
+            "red-car": { url: "/models/red-car.glb", sizeScale: 10, yawOffset: 270, flip: 0, pitch: 0, roll: 90 },
+            "sports-car": { url: "/models/sports-car.glb", sizeScale: 5, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
+            cybertruck: { url: "/models/cybertruck.glb", sizeScale: 50, yawOffset: 20, flip: 0, pitch: 0, roll: 90 },
         };
 
         const mkLayer = (type: VehicleType) => {
@@ -194,9 +334,9 @@ export function AustinHeatmapCard() {
                 sizeScale: cfg.sizeScale,
                 getPosition: (d) => [d.lon, d.lat, 0],
                 getOrientation: (d) => {
-                const baseYaw = sumoAngleToDeckYaw(d.heading);
-                const yaw = (baseYaw + cfg.yawOffset + cfg.flip) % 360;
-                return [cfg.pitch, yaw, cfg.roll];
+                    const baseYaw = sumoAngleToDeckYaw(d.heading);
+                    const yaw = (baseYaw + cfg.yawOffset + cfg.flip) % 360;
+                    return [cfg.pitch, yaw, cfg.roll];
                 },
                 pickable: true,
                 _lighting: "pbr",
@@ -295,7 +435,7 @@ export function AustinHeatmapCard() {
 
             <CardContent className="p-0">
                 {mapView === "heatmap" && (
-                    <div className="relative h-[460px] w-full">
+                    <div className="relative h-[600px] w-full">
                         <DeckGL
                             initialViewState={{ latitude: AUSTIN_CENTER.latitude, longitude: AUSTIN_CENTER.longitude, zoom: 11.5 }}
                             controller
@@ -312,7 +452,7 @@ export function AustinHeatmapCard() {
                 )}
 
                 {mapView === "digital-twin" && (
-                    <div className="relative h-[460px] w-full">
+                    <div className="relative h-[600px] w-full">
                         <DeckGL
                             initialViewState={{
                                 latitude: AUSTIN_CENTER.latitude,
