@@ -6,7 +6,7 @@ This folder is a separate, KISS “digital twin” backend:
 - A small **Torch** model runs on GPU (DGX) to infer a compact control vector (e.g., inflow multipliers) that **drives SUMO**.
 - The backend broadcasts state over WebSocket as JSON.
 
-This is intentionally isolated from the main `traffic_pipeline/` ETL code.
+This is intentionally isolated from the main ETL code under `src/data_pipeline/`.
 
 ### What the AI model does
 
@@ -82,4 +82,3 @@ Provide your own Austin `.sumocfg` and a controls JSON with valid edge routes:
   ]
 }
 ```
-

@@ -4,10 +4,10 @@ import argparse
 from pathlib import Path
 import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from traffic_pipeline.config import load_config
-from traffic_pipeline.model.train_hotspot import train_hotspot_model
+from config import load_config
+from model.train_hotspot import train_hotspot_model
 
 
 def main() -> None:

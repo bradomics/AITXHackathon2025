@@ -4,10 +4,10 @@ import argparse
 from pathlib import Path
 import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from traffic_pipeline.config import load_config
-from traffic_pipeline.model.tokenizer_h3 import tokenize_h3_time_series
+from config import load_config
+from model.tokenizer_h3 import tokenize_h3_time_series
 
 
 def main() -> None:

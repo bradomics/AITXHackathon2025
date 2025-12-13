@@ -1,16 +1,37 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 
-from traffic_pipeline.config import load_config
-from traffic_pipeline.data_pipeline.aadt import silverize_aadt_stations
-from traffic_pipeline.data_pipeline.feature_factory import build_hotspot_features
-from traffic_pipeline.data_pipeline.silverize import silverize_incidents
-from traffic_pipeline.data_pipeline.weather import silverize_weather_hourly
+from config import load_config
+from data_pipeline.aadt import silverize_aadt_stations
+from data_pipeline.feature_factory import build_hotspot_features
+from data_pipeline.silverize import silverize_incidents
+from data_pipeline.weather import silverize_weather_hourly
+
+
+def _has_module(name: str) -> bool:
+    return importlib.util.find_spec(name) is not None
+
+
+def _exit_missing_deps(*, stage: str, missing: str) -> "NoReturn":
+    raise SystemExit(
+        "\n".join(
+            [
+                f"[{stage}] missing optional dependency: {missing}",
+                "Tokenizer/training/inference require third-party deps (h3/torch/numpy).",
+                "Run end-to-end with the venv python:",
+                "  .venv/bin/python -m pip install -r requirements.txt",
+                "  .venv/bin/python eta_mvp_run.py --config configs/pipeline.toml",
+                "Or run ETL only (no h3/torch):",
+                "  python eta_mvp_run.py --only-etl",
+            ]
+        )
+    )
 
 
 def _run_silver(*, config_path: str) -> None:
@@ -85,7 +106,12 @@ def _run_tok(*, config_path: str) -> None:
     if not weather_csv.exists():
         raise FileNotFoundError(weather_csv)
 
-    from traffic_pipeline.model.tokenizer_h3 import tokenize_h3_time_series
+    if not _has_module("h3"):
+        _exit_missing_deps(stage="tok", missing="h3")
+    if not _has_module("numpy"):
+        _exit_missing_deps(stage="tok", missing="numpy")
+
+    from model.tokenizer_h3 import tokenize_h3_time_series
 
     stats = tokenize_h3_time_series(
         incidents_csv=incidents_csv,
@@ -118,7 +144,12 @@ def _run_train(*, config_path: str) -> None:
     if not meta_path.exists():
         raise FileNotFoundError(meta_path)
 
-    from traffic_pipeline.model.train_hotspot import train_hotspot_model
+    if not _has_module("torch"):
+        _exit_missing_deps(stage="train", missing="torch")
+    if not _has_module("numpy"):
+        _exit_missing_deps(stage="train", missing="numpy")
+
+    from model.train_hotspot import train_hotspot_model
 
     out_path = Path("artifacts/h3_hotspot_model.pt")
     train_hotspot_model(
