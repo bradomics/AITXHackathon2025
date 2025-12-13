@@ -6,6 +6,7 @@ import Map from "react-map-gl/mapbox";
 import { DeckGL } from "@deck.gl/react";
 import { HeatmapLayer } from "@deck.gl/aggregation-layers";
 import { TripsLayer } from "@deck.gl/geo-layers";
+import { ScatterplotLayer } from "@deck.gl/layers";
 import { ScenegraphLayer } from "@deck.gl/mesh-layers";
 
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,19 @@ type Trip = {
     path: [number, number][];
     timestamps: number[]; // seconds
 };
+
+type Incident = {
+    traffic_report_id: string;
+    published_date?: string;
+    issue_reported?: string;
+    address?: string;
+    agency?: string;
+    latitude?: string;
+    longitude?: string;
+    location?: { type: "Point"; coordinates: [number, number] };
+};
+
+
 
 function midpoint(a: [number, number], b: [number, number]): [number, number] {
     return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
@@ -187,6 +201,65 @@ export function AustinHeatmapCard() {
     const [currentTime, setCurrentTime] = useState(0);
 
     const seenIncidentIdsRef = React.useRef<Set<string>>(new Set());
+    const [incidentMarkers, setIncidentMarkers] = useState<Incident[]>([]);
+
+
+
+    // useEffect(() => {
+    //     let isMounted = true;
+
+    //     const fetchIncidents = async () => {
+    //         try {
+    //             const res = await fetch(
+    //                 "https://data.austintexas.gov/resource/dx9v-zd7x.json?$order=published_date DESC&$limit=10"
+    //             );
+    //             if (!res.ok) return;
+
+    //             const incidents = await res.json();
+
+    //             if (!isMounted || !Array.isArray(incidents)) return;
+
+    //             const newOnes = [];
+
+    //             for (const incident of incidents) {
+    //                 const id = incident.traffic_report_id;
+    //                 if (!id) continue;
+
+    //                 if (!seenIncidentIdsRef.current.has(id)) {
+    //                     seenIncidentIdsRef.current.add(id);
+    //                     newOnes.push(incident);
+    //                 }
+    //             }
+
+    //             if (newOnes.length > 0) {
+    //                 // 🔔 ALERT / HANDLE NEW EVENTS HERE
+    //                 console.log("🚨 New traffic incidents:", newOnes);
+
+    //                 // Example: browser alert (replace later)
+    //                 newOnes.forEach((i) => {
+    //                     console.log(
+    //                         `[NEW] ${i.issue_reported} @ ${i.address} (${i.agency?.trim()})`
+    //                     );
+    //                 });
+
+    //                 // Optional: setState(newOnes) if you want to render them
+    //             }
+    //         } catch (err) {
+    //             // swallow network errors
+    //         }
+    //     };
+
+    //     // initial fetch
+    //     fetchIncidents();
+
+    //     // poll every minute
+    //     const intervalId = setInterval(fetchIncidents, 60_000);
+
+    //     return () => {
+    //         isMounted = false;
+    //         clearInterval(intervalId);
+    //     };
+    // }, []);
 
 
     useEffect(() => {
@@ -199,11 +272,10 @@ export function AustinHeatmapCard() {
                 );
                 if (!res.ok) return;
 
-                const incidents = await res.json();
-
+                const incidents: Incident[] = await res.json();
                 if (!isMounted || !Array.isArray(incidents)) return;
 
-                const newOnes = [];
+                const newOnes: Incident[] = [];
 
                 for (const incident of incidents) {
                     const id = incident.traffic_report_id;
@@ -216,27 +288,24 @@ export function AustinHeatmapCard() {
                 }
 
                 if (newOnes.length > 0) {
-                    // 🔔 ALERT / HANDLE NEW EVENTS HERE
-                    console.log("🚨 New traffic incidents:", newOnes);
-
-                    // Example: browser alert (replace later)
-                    newOnes.forEach((i) => {
-                        console.log(
-                            `[NEW] ${i.issue_reported} @ ${i.address} (${i.agency?.trim()})`
-                        );
+                    // markers
+                    setIncidentMarkers((prev) => {
+                        // keep list bounded so the browser stays fast
+                        const next = [...newOnes, ...prev];
+                        return next.slice(0, 100); // keep newest 100
                     });
 
-                    // Optional: setState(newOnes) if you want to render them
+                    // (optional) alert/log
+                    newOnes.forEach((i) => {
+                        console.log(`[NEW] ${i.issue_reported} @ ${i.address} (${i.agency?.trim()})`);
+                    });
                 }
-            } catch (err) {
-                // swallow network errors
+            } catch {
+                // ignore
             }
         };
 
-        // initial fetch
         fetchIncidents();
-
-        // poll every minute
         const intervalId = setInterval(fetchIncidents, 60_000);
 
         return () => {
@@ -244,6 +313,7 @@ export function AustinHeatmapCard() {
             clearInterval(intervalId);
         };
     }, []);
+
 
 
 
@@ -621,6 +691,43 @@ export function AustinHeatmapCard() {
 
 
 
+    const incidentMarkerLayer = useMemo(() => {
+        return new ScatterplotLayer<Incident>({
+            id: "incident-markers",
+            data: incidentMarkers,
+            getPosition: (d) => {
+                const c = d.location?.coordinates;
+                if (c?.length === 2) return [c[0], c[1], 0];
+
+                const lon = d.longitude ? Number(d.longitude) : NaN;
+                const lat = d.latitude ? Number(d.latitude) : NaN;
+                return [lon, lat, 0];
+            },
+            getRadius: 18,              // meters
+            radiusUnits: "meters",
+            radiusMinPixels: 6,
+            radiusMaxPixels: 18,
+            getFillColor: (d) => {
+                // red-ish for crashes, blue-ish otherwise
+                const t = (d.issue_reported ?? "").toLowerCase();
+                const isCrash = t.includes("crash") || t.includes("collision");
+                return isCrash ? [255, 80, 80, 220] : [80, 200, 255, 220];
+            },
+            pickable: true,
+            onClick: (info) => {
+                const d = info.object;
+                if (!d) return;
+                alert(`${d.issue_reported ?? "Incident"}\n${d.address ?? ""}\n${d.agency?.trim() ?? ""}`);
+            },
+            updateTriggers: {
+                getFillColor: incidentMarkers, // safe: list is bounded
+            },
+        });
+    }, [incidentMarkers]);
+
+
+
+
     // -------- SUMO stuff ----------
 
     function sumoAngleToDeckYaw(angle: number) {
@@ -764,7 +871,12 @@ export function AustinHeatmapCard() {
                         <DeckGL
                             initialViewState={{ latitude: AUSTIN_CENTER.latitude, longitude: AUSTIN_CENTER.longitude, zoom: 11.5 }}
                             controller
-                            layers={tripLayer ? [...heatmapLayers, tripLayer] : heatmapLayers}
+                            // layers={tripLayer ? [...heatmapLayers, tripLayer] : heatmapLayers}
+                            layers={[
+                                ...heatmapLayers,
+                                tripLayer,
+                                incidentMarkerLayer,
+                            ].filter(Boolean) as any}
                             style={{ position: "absolute", inset: 0 }}
                         >
                             <Map
