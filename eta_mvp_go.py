@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -74,6 +76,95 @@ def _load_dotenv(dotenv_path: Path) -> None:
         os.environ.setdefault(key, value)
 
 
+_TARGET_BUCKET_RE = re.compile(r"^//\s*target_bucket=(.+)\s*$")
+
+
+def _resolve_path(root: Path, value: str) -> Path:
+    p = Path(value)
+    return p if p.is_absolute() else (root / p)
+
+
+def _preview_phase1_output(path: Path, *, n: int) -> str:
+    if n <= 0:
+        return ""
+    if not path.exists():
+        return f"[preview] missing {path}"
+
+    target_bucket = ""
+    coll_lines: list[str] = []
+    inc_lines: list[str] = []
+    section: str | None = None
+
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not target_bucket:
+            m = _TARGET_BUCKET_RE.match(line)
+            if m:
+                target_bucket = m.group(1).strip()
+
+        if line.startswith("const COLLISION_POINTS"):
+            section = "collision"
+            continue
+        if line.startswith("const INCIDENT_POINTS"):
+            section = "incident"
+            continue
+        if line.startswith("];"):
+            section = None
+            continue
+
+        if section == "collision" and len(coll_lines) < n and line.startswith("{ position:"):
+            coll_lines.append(line)
+        elif section == "incident" and len(inc_lines) < n and line.startswith("{ position:"):
+            inc_lines.append(line)
+
+        if len(coll_lines) >= n and len(inc_lines) >= n:
+            break
+
+    out: list[str] = []
+    bucket_s = f" target_bucket={target_bucket}" if target_bucket else ""
+    out.append(f"[preview]{bucket_s} {path}")
+    if coll_lines:
+        out.append(f"[preview] COLLISION_POINTS (first {len(coll_lines)}):")
+        out.extend(["  " + s for s in coll_lines])
+    if inc_lines:
+        out.append(f"[preview] INCIDENT_POINTS (first {len(inc_lines)}):")
+        out.extend(["  " + s for s in inc_lines])
+    return "\n".join(out)
+
+
+def _preview_safety_output(path: Path, *, n: int) -> str:
+    if n <= 0:
+        return ""
+    if not path.exists():
+        return f"[preview] missing {path}"
+
+    try:
+        obj = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return f"[preview] invalid json {path}"
+
+    target_bucket = str(obj.get("target_bucket") or "")
+    assets = obj.get("assets") or {}
+    type1 = assets.get("type1_collisions") or []
+    type2 = assets.get("type2_incidents") or []
+
+    def fmt_asset(a: dict[str, object]) -> str:
+        return f"{a.get('asset_id')} lat={a.get('lat')} lon={a.get('lon')} expected_hit={a.get('expected_hit')}"
+
+    out: list[str] = []
+    bucket_s = f" target_bucket={target_bucket}" if target_bucket else ""
+    out.append(f"[preview]{bucket_s} {path}")
+    out.append(f"[preview] type1_collisions assets={len(type1)} (first {min(n, len(type1))}):")
+    for a in type1[:n]:
+        if isinstance(a, dict):
+            out.append("  " + fmt_asset(a))
+    out.append(f"[preview] type2_incidents assets={len(type2)} (first {min(n, len(type2))}):")
+    for a in type2[:n]:
+        if isinstance(a, dict):
+            out.append("  " + fmt_asset(a))
+    return "\n".join(out)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="ETA MVP: fetch forecast + run hotspot inference (venv)")
     ap.add_argument("--config", default="configs/pipeline.toml")
@@ -84,6 +175,7 @@ def main() -> None:
     ap.add_argument("--top-k", type=int, default=50)
     ap.add_argument("--threshold", type=float, default=0.0)
     ap.add_argument("--skip-forecast", action="store_true", help="Use existing forecast CSV (no API call)")
+    ap.add_argument("--preview-lines", type=int, default=8)
     ap.add_argument("--once", action="store_true", help="Run a single inference cycle and exit")
     args = ap.parse_args()
 
@@ -149,6 +241,27 @@ def main() -> None:
             ],
             cwd=root,
         )
+
+        out_path = _resolve_path(root, str(args.out))
+        preview = _preview_phase1_output(out_path, n=int(args.preview_lines))
+        if preview:
+            print(preview, flush=True)
+
+        safety_out = out_path.with_name("phase1_safety_output.json")
+        _run(
+            [
+                sys.executable,
+                "scripts/plan_safety_assets.py",
+                "--in",
+                str(out_path),
+                "--out",
+                str(safety_out),
+            ],
+            cwd=root,
+        )
+        safety_preview = _preview_safety_output(safety_out, n=int(args.preview_lines))
+        if safety_preview:
+            print(safety_preview, flush=True)
 
     if args.once:
         run_once()
