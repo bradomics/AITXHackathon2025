@@ -10,19 +10,20 @@ Pipeline stages:
 - **Gold**: feature table in `data/gold/`
 
 Entry point:
-- `python3 scripts/run_pipeline.py --config configs/pipeline.toml`
+- ETL only (stdlib): `python3 eta_mvp_run.py --config configs/pipeline.toml --only-etl`
+- End-to-end (needs venv): `.venv/bin/python eta_mvp_run.py --config configs/pipeline.toml`
 
 Phase 2 (tokenize/train/infer):
-- `scripts/tokenize_h3.py` → `data/gold/tokens/h3_v1/`
-- `scripts/train_hotspot.py` → `artifacts/h3_hotspot_model.pt`
-- `scripts/infer_hotspot.py` → `output/phase1_output.json`
+- `src/traffic_pipeline/model/tokenize_h3.py` → `data/gold/tokens/h3_v1/`
+- `src/traffic_pipeline/model/train_hotspot_cli.py` → `artifacts/h3_hotspot_model.pt`
+- `src/traffic_pipeline/model/infer_hotspot.py` → `output/phase1_output.json`
 
 End-to-end orchestrator:
-- `.venv/bin/python eta_mvp_run.py` (supports `--only-silver/--only-gold/--only-tok/--only-train`)
+- `.venv/bin/python eta_mvp_run.py` (supports `--only-silver/--only-etl/--only-gold/--only-tok/--only-train`)
 
 ## Local environment
 
-The core pipeline modules in `traffic_pipeline/` use only the Python standard library.
+The ETL modules in `src/traffic_pipeline/data_pipeline/` use only the Python standard library.
 
 Weather acquisition scripts and the Phase 2 tokenizer/training scripts require packages listed in `requirements.txt`. On macOS/Homebrew Python you should install them in a venv:
 
@@ -34,13 +35,13 @@ python3 -m venv .venv
 ## Key files
 
 - Config: `configs/pipeline.toml`
-- Pipeline modules: `traffic_pipeline/`
-- CLI scripts: `scripts/`
+- Pipeline modules: `src/traffic_pipeline/`
+- Helper scripts: `scripts/`
 
 ## Simplicity-first rules (KISS/YAGNI)
 
 - Prefer straightforward scripts over frameworks.
-- Keep `traffic_pipeline/` dependency-light (stdlib-first).
+- Keep `src/traffic_pipeline/data_pipeline/` dependency-light (stdlib-first).
 - Avoid speculative features and heavy abstractions.
 - Keep each script doing one job (silverize incidents, silverize weather, etc.).
 - Only add validation/error-handling when there’s a known failure mode.

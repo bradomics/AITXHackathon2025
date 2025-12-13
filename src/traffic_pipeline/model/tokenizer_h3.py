@@ -16,6 +16,8 @@ class TokenizeH3Stats:
     n_cells: int
     collisions_events: int
     traffic_incidents_events: int
+    collisions_pairs: int
+    traffic_incidents_pairs: int
     skipped_missing_time_bucket: int
     skipped_missing_latlon: int
     skipped_outside_radius: int
@@ -194,6 +196,9 @@ def tokenize_h3_time_series(
     coll_ptr, coll_idx, coll_val = to_csr(coll_by_t)
     inc_ptr, inc_idx, inc_val = to_csr(inc_by_t)
 
+    collisions_pairs = sum(len(s) for s in coll_by_t)
+    traffic_incidents_pairs = sum(len(s) for s in inc_by_t)
+
     # Write artifacts.
     with (out_dir / "buckets.csv").open("w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=["t", "bucket_start"])
@@ -241,6 +246,8 @@ def tokenize_h3_time_series(
         n_cells=n_cells,
         collisions_events=collisions_events,
         traffic_incidents_events=traffic_incidents_events,
+        collisions_pairs=collisions_pairs,
+        traffic_incidents_pairs=traffic_incidents_pairs,
         skipped_missing_time_bucket=skipped_missing_time_bucket,
         skipped_missing_latlon=skipped_missing_latlon,
         skipped_outside_radius=skipped_outside_radius,

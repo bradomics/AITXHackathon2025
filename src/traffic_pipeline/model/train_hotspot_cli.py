@@ -4,10 +4,10 @@ import argparse
 from pathlib import Path
 import sys
 
-sys.path.append(str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from traffic_pipeline.config import load_config
-from traffic_pipeline.train_hotspot import train_hotspot_model
+from traffic_pipeline.model.train_hotspot import train_hotspot_model
 
 
 def main() -> None:
@@ -18,13 +18,10 @@ def main() -> None:
     ap.add_argument("--batch-size", type=int, default=64)
     ap.add_argument("--lr", type=float, default=3e-4)
     ap.add_argument("--d-model", type=int, default=128)
-    ap.add_argument("--n-layers", type=int, default=4)
-    ap.add_argument("--dropout", type=float, default=0.1)
     ap.add_argument("--arch", default="mamba", help="mamba or gru (mamba will fall back to gru if unavailable)")
     ap.add_argument("--pos-weight-coll", type=float, default=25.0)
     ap.add_argument("--pos-weight-inc", type=float, default=10.0)
-    ap.add_argument("--train-frac", type=float, default=0.9)
-    ap.add_argument("--num-workers", type=int, default=0)
+    ap.add_argument("--train-frac", type=float, default=0.8)
     ap.add_argument("--device", default=None, help="cpu|cuda (auto if omitted)")
     ap.add_argument("--max-train-batches", type=int, default=0, help="0=run all")
     ap.add_argument("--max-val-batches", type=int, default=0, help="0=run all")
@@ -51,16 +48,13 @@ def main() -> None:
         batch_size=args.batch_size,
         lr=args.lr,
         d_model=args.d_model,
-        n_layers=args.n_layers,
-        dropout=args.dropout,
         arch=args.arch,
-        pos_weight_coll=args.pos_weight_coll,
-        pos_weight_inc=args.pos_weight_inc,
         train_frac=args.train_frac,
-        num_workers=args.num_workers,
         device=args.device,
         max_train_batches=args.max_train_batches,
         max_val_batches=args.max_val_batches,
+        pos_weight_coll=args.pos_weight_coll,
+        pos_weight_inc=args.pos_weight_inc,
     )
 
 

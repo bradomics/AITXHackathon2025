@@ -1,19 +1,20 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timedelta
 import csv
 import json
+from datetime import datetime, timedelta
 from pathlib import Path
 import sys
 
-sys.path.append(str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import numpy as np
 import torch
 
 from traffic_pipeline.config import load_config
-from traffic_pipeline.model_hotspot import HotspotSeqModel, ModelConfig
+from traffic_pipeline.model.model_hotspot import build_model
+from traffic_pipeline.util import parse_dt
 
 
 def _to_float(s: str) -> float:
@@ -43,45 +44,41 @@ def _season_id(month: int) -> int:
     return 3
 
 
-def _feature_row(
-    bucket: datetime,
-    *,
-    temperature_f: float,
-    precipitation_inch: float,
-    visibility_meters: float,
-    wind_speed_mph: float,
-    weather_code: float,
-) -> list[float]:
+def _feature_row(bucket: datetime, *, feature_names: list[str], weather: dict[str, float]) -> list[float]:
     hour = bucket.hour
     dow = bucket.weekday()
     how = dow * 24 + hour
     month = bucket.month
     season = _season_id(month)
+
     hour_sin, hour_cos = _sin_cos(hour, 24.0)
     dow_sin, dow_cos = _sin_cos(dow, 7.0)
     how_sin, how_cos = _sin_cos(how, 168.0)
     month_sin, month_cos = _sin_cos(month - 1, 12.0)
 
-    return [
-        float(hour),
-        float(dow),
-        float(how),
-        float(month),
-        float(season),
-        float(hour_sin),
-        float(hour_cos),
-        float(dow_sin),
-        float(dow_cos),
-        float(how_sin),
-        float(how_cos),
-        float(month_sin),
-        float(month_cos),
-        float(temperature_f),
-        float(precipitation_inch),
-        float(visibility_meters),
-        float(wind_speed_mph),
-        float(weather_code),
-    ]
+    time_map = {
+        "hour_of_day": float(hour),
+        "day_of_week": float(dow),
+        "hour_of_week": float(how),
+        "month": float(month),
+        "season": float(season),
+        "hour_sin": float(hour_sin),
+        "hour_cos": float(hour_cos),
+        "dow_sin": float(dow_sin),
+        "dow_cos": float(dow_cos),
+        "how_sin": float(how_sin),
+        "how_cos": float(how_cos),
+        "month_sin": float(month_sin),
+        "month_cos": float(month_cos),
+    }
+
+    out: list[float] = []
+    for name in feature_names:
+        if name in time_map:
+            out.append(time_map[name])
+        else:
+            out.append(float(weather.get(name, float("nan"))))
+    return out
 
 
 def _load_cells(cells_csv: Path) -> tuple[np.ndarray, np.ndarray]:
@@ -95,32 +92,26 @@ def _load_cells(cells_csv: Path) -> tuple[np.ndarray, np.ndarray]:
     return np.asarray(lats, dtype=np.float32), np.asarray(lons, dtype=np.float32)
 
 
-def _load_weather_history(weather_hourly_csv: Path) -> list[tuple[datetime, dict[str, float]]]:
-    rows: list[tuple[datetime, dict[str, float]]] = []
+def _load_weather_history_by_bucket(
+    weather_hourly_csv: Path, *, dt_format: str, weather_cols: list[str]
+) -> dict[datetime, dict[str, float]]:
+    out: dict[datetime, dict[str, float]] = {}
     with weather_hourly_csv.open("r", encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
         for row in reader:
             bucket_s = (row.get("bucket_start") or "").strip()
             if not bucket_s:
                 continue
-            bucket = datetime.fromisoformat(bucket_s)
-            rows.append(
-                (
-                    bucket,
-                    {
-                        "temperature_f": _to_float(row.get("temperature_f") or ""),
-                        "precipitation_inch": _to_float(row.get("precipitation_inch") or ""),
-                        "visibility_meters": _to_float(row.get("visibility_meters") or ""),
-                        "wind_speed_mph": _to_float(row.get("wind_speed_mph") or ""),
-                        "weather_code": _to_float(row.get("weather_code") or ""),
-                    },
-                )
-            )
-    rows.sort(key=lambda x: x[0])
-    return rows
+            try:
+                bucket = parse_dt(bucket_s, datetime_format=dt_format)
+            except ValueError:
+                continue
+
+            out[bucket] = {c: _to_float(row.get(c) or "") for c in weather_cols}
+    return out
 
 
-def _load_forecast_rows(forecast_csv: Path, dt_format: str) -> list[tuple[datetime, dict[str, float]]]:
+def _load_forecast_rows(forecast_csv: Path, *, dt_format: str, weather_cols: list[str]) -> list[tuple[datetime, dict[str, float]]]:
     rows: list[tuple[datetime, dict[str, float]]] = []
     with forecast_csv.open("r", encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
@@ -128,17 +119,14 @@ def _load_forecast_rows(forecast_csv: Path, dt_format: str) -> list[tuple[dateti
             fd = (row.get("formatted_date") or "").strip()
             if not fd:
                 continue
-            bucket = datetime.strptime(fd, dt_format).replace(minute=0, second=0, microsecond=0)
+            try:
+                bucket = parse_dt(fd, datetime_format=dt_format).replace(minute=0, second=0, microsecond=0)
+            except ValueError:
+                continue
             rows.append(
                 (
                     bucket,
-                    {
-                        "temperature_f": _to_float(row.get("temperature_f") or ""),
-                        "precipitation_inch": _to_float(row.get("precipitation_inch") or ""),
-                        "visibility_meters": _to_float(row.get("visibility_meters") or ""),
-                        "wind_speed_mph": _to_float(row.get("wind_speed_mph") or ""),
-                        "weather_code": _to_float(row.get("weather_code") or ""),
-                    },
+                    {c: _to_float(row.get(c) or "") for c in weather_cols},
                 )
             )
     rows.sort(key=lambda x: x[0])
@@ -162,11 +150,15 @@ def main() -> None:
         raise FileNotFoundError(model_path)
 
     payload = torch.load(model_path, map_location="cpu", weights_only=False)
-    model_cfg_raw = payload["model_cfg"]
-    resolved_arch = payload.get("resolved_architecture", model_cfg_raw.get("architecture", "mamba"))
-    model_cfg = ModelConfig(**{**model_cfg_raw, "architecture": resolved_arch})
-    model = HotspotSeqModel(model_cfg)
-    model.load_state_dict(payload["state_dict"])
+    model_cfg = payload["model_config"]
+    n_features = int(model_cfg["n_features"])
+    n_cells = int(model_cfg["n_cells"])
+    d_model = int(model_cfg["d_model"])
+    arch = str(model_cfg["arch"])
+    context_steps = int(model_cfg["context_steps"])
+
+    model = build_model(n_features=n_features, n_cells=n_cells, d_model=d_model, arch=arch)
+    model.load_state_dict(payload["model_state"])
     model.eval()
 
     data_dir = Path(payload.get("data_dir") or cfg.tokenizer.output_dir)
@@ -177,10 +169,27 @@ def main() -> None:
 
     x_mean = payload["x_mean"].astype(np.float32)
     x_std = payload["x_std"].astype(np.float32)
-    context_steps = int(cfg.train.context_steps)
+    tokenizer_meta = payload.get("tokenizer_meta") or {}
+    feature_names = list(tokenizer_meta.get("feature_names") or [])
+    if not feature_names:
+        raise ValueError("Checkpoint missing tokenizer_meta.feature_names")
+    if x_mean.shape[0] != len(feature_names) or x_std.shape[0] != len(feature_names):
+        raise ValueError(
+            f"Checkpoint x_mean/x_std shape mismatch: mean={x_mean.shape} std={x_std.shape} features={len(feature_names)}"
+        )
 
-    hist = _load_weather_history(cfg.paths.silver_dir / cfg.silverize.weather_output_name)
-    fc = _load_forecast_rows(Path(args.forecast_csv), cfg.silverize.datetime_format)
+    weather_cols = [n for n in feature_names if n not in {"hour_of_day", "day_of_week", "hour_of_week", "month", "season", "hour_sin", "hour_cos", "dow_sin", "dow_cos", "how_sin", "how_cos", "month_sin", "month_cos"}]
+    hist_by_bucket = _load_weather_history_by_bucket(
+        cfg.paths.silver_dir / cfg.silverize.weather_output_name,
+        dt_format=cfg.silverize.datetime_format,
+        weather_cols=weather_cols,
+    )
+
+    fc = _load_forecast_rows(
+        Path(args.forecast_csv),
+        dt_format=cfg.silverize.datetime_format,
+        weather_cols=weather_cols,
+    )
     if not fc:
         raise ValueError(f"No forecast rows found in {args.forecast_csv}")
 
@@ -190,38 +199,21 @@ def main() -> None:
 
     target_bucket, target_weather = fc[horizon_i]
 
-    # Build context ending at target_bucket (use history for prior hours, forecast for the bucket itself).
-    need_prev = context_steps - 1
-    prev: list[tuple[datetime, dict[str, float]]] = []
+    # Context ending at target_bucket (history for prior hours, forecast for the target hour).
+    buckets = [target_bucket - timedelta(hours=k) for k in range(context_steps - 1, 0, -1)] + [target_bucket]
+    x_rows = []
+    for b in buckets:
+        w = target_weather if b == target_bucket else hist_by_bucket.get(b, {})
+        x_rows.append(_feature_row(b, feature_names=feature_names, weather=w))
 
-    # Prefer history rows immediately before the target time.
-    hist_by_bucket = {b: w for b, w in hist}
-    for k in range(need_prev, 0, -1):
-        b = target_bucket - timedelta(hours=k)
-        w = hist_by_bucket.get(b)
-        if w is not None:
-            prev.append((b, w))
-        else:
-            prev.append((b, {"temperature_f": float("nan"), "precipitation_inch": float("nan"), "visibility_meters": float("nan"), "wind_speed_mph": float("nan"), "weather_code": float("nan")}))
-
-    seq = prev + [(target_bucket, target_weather)]
-    x_rows = [
-        _feature_row(
-            b,
-            temperature_f=w["temperature_f"],
-            precipitation_inch=w["precipitation_inch"],
-            visibility_meters=w["visibility_meters"],
-            wind_speed_mph=w["wind_speed_mph"],
-            weather_code=w["weather_code"],
-        )
-        for b, w in seq
-    ]
     x = np.asarray(x_rows, dtype=np.float32)
     x = np.where(np.isfinite(x), x, x_mean).astype(np.float32)
     x = (x - x_mean) / x_std
 
     with torch.no_grad():
-        p_coll, p_inc = model(torch.from_numpy(x).unsqueeze(0))
+        logits_coll, logits_inc = model(torch.from_numpy(x).unsqueeze(0))
+        p_coll = torch.sigmoid(logits_coll)
+        p_inc = torch.sigmoid(logits_inc)
     p_coll = p_coll.squeeze(0).numpy()
     p_inc = p_inc.squeeze(0).numpy()
 

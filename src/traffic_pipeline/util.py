@@ -31,3 +31,31 @@ def slugify(text: str) -> str:
     s = _SLUG_RE.sub("_", s).strip("_")
     return s or "unknown"
 
+
+_ALT_DT_FORMATS = (
+    "%Y %b %d %I:%M:%S %p",  # e.g. "2019 May 31 11:27:00 PM"
+)
+
+
+def parse_dt(value: str, *, datetime_format: str) -> datetime:
+    s = (value or "").strip()
+    if not s:
+        raise ValueError("empty datetime")
+
+    try:
+        return datetime.strptime(s, datetime_format)
+    except ValueError:
+        pass
+
+    for fmt in _ALT_DT_FORMATS:
+        if fmt == datetime_format:
+            continue
+        try:
+            return datetime.strptime(s, fmt)
+        except ValueError:
+            continue
+
+    dt = datetime.fromisoformat(s)
+    if dt.tzinfo is not None:
+        dt = dt.replace(tzinfo=None)
+    return dt

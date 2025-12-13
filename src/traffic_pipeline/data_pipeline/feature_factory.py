@@ -12,6 +12,9 @@ from traffic_pipeline.util import floor_dt, haversine_km, slugify
 
 @dataclass(frozen=True)
 class HotspotFeatureStats:
+    silver_rows_read: int
+    collisions_used: int
+    traffic_incidents_used: int
     output_rows: int
     unique_cells: int
     unique_cell_buckets: int
@@ -182,13 +185,22 @@ def build_hotspot_features(
     if not rows:
         with out_csv.open("w", encoding="utf-8", newline="") as f_out:
             csv.writer(f_out).writerow(["bucket_start", "cell_lat", "cell_lon"])
-        return HotspotFeatureStats(output_rows=0, unique_cells=0, unique_cell_buckets=0)
+        return HotspotFeatureStats(
+            silver_rows_read=0,
+            collisions_used=0,
+            traffic_incidents_used=0,
+            output_rows=0,
+            unique_cells=0,
+            unique_cell_buckets=0,
+        )
 
     # (cell_key, bucket_start) -> counts
     counts: dict[tuple[str, str], dict[str, object]] = {}
     cell_coords: dict[str, tuple[float, float]] = {}
     issue_slugs: set[str] = set()
     cells_to_buckets: dict[str, set[str]] = defaultdict(set)
+    collisions_used = 0
+    traffic_incidents_used = 0
 
     for row in rows:
         try:
@@ -224,8 +236,10 @@ def build_hotspot_features(
             counts[key] = rec
 
         if (row.get("event_class") or "").strip() == "collision":
+            collisions_used += 1
             rec["n_collisions"] = int(rec["n_collisions"]) + 1
         else:
+            traffic_incidents_used += 1
             rec["n_traffic_incidents"] = int(rec["n_traffic_incidents"]) + 1
         rec["issue"][issue] += 1  # type: ignore[index]
 
@@ -414,6 +428,9 @@ def build_hotspot_features(
                 last_dt = bucket_dt
 
     return HotspotFeatureStats(
+        silver_rows_read=len(rows),
+        collisions_used=collisions_used,
+        traffic_incidents_used=traffic_incidents_used,
         output_rows=out_rows,
         unique_cells=len(cell_coords),
         unique_cell_buckets=len(counts),

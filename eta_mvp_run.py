@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
-from traffic_pipeline.aadt import silverize_aadt_stations
+sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
+
 from traffic_pipeline.config import load_config
-from traffic_pipeline.feature_factory import build_hotspot_features
-from traffic_pipeline.silverize import silverize_incidents
-from traffic_pipeline.weather import silverize_weather_hourly
+from traffic_pipeline.data_pipeline.aadt import silverize_aadt_stations
+from traffic_pipeline.data_pipeline.feature_factory import build_hotspot_features
+from traffic_pipeline.data_pipeline.silverize import silverize_incidents
+from traffic_pipeline.data_pipeline.weather import silverize_weather_hourly
 
 
 def _run_silver(*, config_path: str) -> None:
@@ -82,7 +85,7 @@ def _run_tok(*, config_path: str) -> None:
     if not weather_csv.exists():
         raise FileNotFoundError(weather_csv)
 
-    from traffic_pipeline.tokenizer_h3 import tokenize_h3_time_series
+    from traffic_pipeline.model.tokenizer_h3 import tokenize_h3_time_series
 
     stats = tokenize_h3_time_series(
         incidents_csv=incidents_csv,
@@ -115,7 +118,7 @@ def _run_train(*, config_path: str) -> None:
     if not meta_path.exists():
         raise FileNotFoundError(meta_path)
 
-    from traffic_pipeline.train_hotspot import train_hotspot_model
+    from traffic_pipeline.model.train_hotspot import train_hotspot_model
 
     out_path = Path("artifacts/h3_hotspot_model.pt")
     train_hotspot_model(
@@ -132,6 +135,7 @@ def main() -> None:
     g = ap.add_mutually_exclusive_group()
     g.add_argument("--only-silver", action="store_true", help="Run bronze -> silver only")
     g.add_argument("--only-gold", action="store_true", help="Run silver -> gold only")
+    g.add_argument("--only-etl", action="store_true", help="Run bronze -> silver -> gold (no tokenize/train)")
     g.add_argument("--only-tok", action="store_true", help="Run tokenizer only")
     g.add_argument("--only-train", action="store_true", help="Run training only")
 
@@ -141,6 +145,10 @@ def main() -> None:
         _run_silver(config_path=args.config)
         return
     if args.only_gold:
+        _run_gold(config_path=args.config)
+        return
+    if args.only_etl:
+        _run_silver(config_path=args.config)
         _run_gold(config_path=args.config)
         return
     if args.only_tok:

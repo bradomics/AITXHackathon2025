@@ -4,10 +4,10 @@ import argparse
 from pathlib import Path
 import sys
 
-sys.path.append(str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from traffic_pipeline.config import load_config
-from traffic_pipeline.tokenizer_h3 import tokenize_h3_time_series
+from traffic_pipeline.model.tokenizer_h3 import tokenize_h3_time_series
 
 
 def main() -> None:
@@ -30,6 +30,8 @@ def main() -> None:
         austin_center_lon=cfg.tokenizer.austin_center_lon,
         austin_radius_km=cfg.tokenizer.austin_radius_km,
         context_steps=cfg.train.context_steps,
+        datetime_format=cfg.silverize.datetime_format,
+        bucket_minutes=cfg.features.bucket_minutes,
     )
 
     print(
@@ -44,4 +46,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

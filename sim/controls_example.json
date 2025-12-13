@@ -1,0 +1,19 @@
+{
+  "control_interval_s": 60,
+  "context_steps": 12,
+  "controls": [
+    {
+      "control_id": "ramp_1",
+      "edge_id": "E1",
+      "baseline_veh_per_hour": 600.0,
+      "route_edges": ["E1", "E2", "E3"]
+    },
+    {
+      "control_id": "ramp_2",
+      "edge_id": "E10",
+      "baseline_veh_per_hour": 450.0,
+      "route_edges": ["E10", "E11", "E12"]
+    }
+  ]
+}
+
