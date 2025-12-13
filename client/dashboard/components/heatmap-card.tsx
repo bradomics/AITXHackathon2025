@@ -111,7 +111,7 @@ export function AustinHeatmapCard() {
         { position: [-97.7500, 30.2400], weight: 1.4 },
     ];
 
-    const layers = [
+    const heatmapLayers = [
         new HeatmapLayer<HeatPoint>({
             id: "austin-baseline",
             data: BASELINE_POINTS,
@@ -135,11 +135,19 @@ export function AustinHeatmapCard() {
         }),
     ];
 
-    const [mapView, setMapView] = useState(viewState);
+    const [mapView, setMapView] = useState('heatmap');
+    const [layers, setLayers] = useState(heatmapLayers);
 
-    const handleMapViewChange = (viewState: any) => {
-        alert(`here is the view state: ${viewState}`);
-        setMapView(viewState);
+    const handleMapViewChange = (mapView: any) => {
+        // alert(`here is the view state: ${viewState}`);
+        setMapView(mapView);
+        if (mapView === 'heatmap') {
+            setLayers(heatmapLayers);
+        } else if (mapView === 'composite-view') {
+            setLayers([]);
+        } else if (mapView === 'digital-twin') {
+            setLayers([]);
+        }
     }
 
     return (
@@ -149,27 +157,45 @@ export function AustinHeatmapCard() {
                 <CardDescription className="pb-0 gap-0">Traffic Hotspots</CardDescription>
                 <div className="flex flex-col items-start pb-0">
                     <ButtonGroup>
-                        <Button onClick={() => { handleMapViewChange('heatmap'); }} variant="outline">Heatmap</Button>
-                        <Button onClick={() => { handleMapViewChange('digital-twin'); }} variant="outline">Digital Twin</Button>
-                        <Button onClick={() => { handleMapViewChange('composite-view'); }} variant="outline">Composite View</Button>
+                        <Button
+                            onClick={() => { handleMapViewChange('heatmap'); }}
+                            variant={mapView === "heatmap" ? "default" : "outline"}
+                        >
+                            Heatmap
+                        </Button>
+                        <Button
+                            onClick={() => { handleMapViewChange('digital-twin'); }}
+                            variant={mapView === "digital-twin" ? "default" : "outline"}
+                        >
+                            Digital Twin
+                        </Button>
+                        <Button
+                            onClick={() => { handleMapViewChange('composite-view'); }}
+                            variant={mapView === "composite-view" ? "default" : "outline"}
+                        >
+                            Composite View
+                        </Button>
                     </ButtonGroup>
                 </div>
             </CardHeader>
             <CardContent className="p-0">
-                <div className="relative h-[460px] w-full">
-                    <DeckGL
-                        initialViewState={{ latitude: 30.2672, longitude: -97.7431, zoom: 11.5 }}
-                        controller
-                        layers={layers}
-                        style={{ position: "absolute", inset: 0 }}
-                    >
-                        <Map
-                            mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
-                            mapStyle="mapbox://styles/mapbox/dark-v11"
+                {
+                    mapView === "heatmap" &&
+                    <div className="relative h-[460px] w-full">
+                        <DeckGL
+                            initialViewState={{ latitude: 30.2672, longitude: -97.7431, zoom: 11.5 }}
+                            controller
+                            layers={heatmapLayers}
                             style={{ position: "absolute", inset: 0 }}
-                        />
-                    </DeckGL>
-                </div>
+                        >
+                            <Map
+                                mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
+                                mapStyle="mapbox://styles/mapbox/dark-v11"
+                                style={{ position: "absolute", inset: 0 }}
+                            />
+                        </DeckGL>
+                    </div>
+                }
             </CardContent>
         </Card>
 
