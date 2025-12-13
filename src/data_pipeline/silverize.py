@@ -4,7 +4,7 @@ import csv
 from dataclasses import dataclass
 from pathlib import Path
 
-from traffic_pipeline.util import parse_dt
+from util import parse_dt
 
 
 @dataclass(frozen=True)

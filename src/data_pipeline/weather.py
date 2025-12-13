@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from traffic_pipeline.util import floor_dt, parse_dt
+from util import floor_dt, parse_dt
 
 
 @dataclass(frozen=True)

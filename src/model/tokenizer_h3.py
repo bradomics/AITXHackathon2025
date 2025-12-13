@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from traffic_pipeline.util import floor_dt, haversine_km
+from util import floor_dt, haversine_km
 
 
 @dataclass(frozen=True)

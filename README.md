@@ -78,7 +78,7 @@ Column groups:
 ## Entry points
 
 - `eta_mvp_run.py`: end-to-end orchestrator (silver → gold → tokenize → train)
-- Model CLIs (live under `src/traffic_pipeline/model/`):
+- Model CLIs (live under `src/model/`):
   - `tokenize_h3.py`: builds an H3 (hex) dataset under `tokenizer.output_dir`
   - `train_hotspot_cli.py`: trains a sequence model to predict per-hex probabilities
   - `infer_hotspot.py`: emits HeatPoint arrays to `output/phase1_output.json`
@@ -109,17 +109,18 @@ Outputs:
 
 ## Code layout
 
-- Pipeline code lives under `src/traffic_pipeline/`:
-  - `src/traffic_pipeline/data_pipeline/`: silver + gold feature factory (stdlib-first)
-  - `src/traffic_pipeline/model/`: tokenizer + training + inference (uses `h3` + `torch`)
+- Pipeline code lives under `src/`:
+  - `src/data_pipeline/`: silver + gold feature factory (stdlib-first)
+  - `src/model/`: tokenizer + training + inference (uses `h3` + `torch`)
+  - Shared: `src/config.py` and `src/util.py`
 - Helper scripts live under `scripts/` (weather fetchers).
 
 ## Phase 2 commands (tokenize/train/infer)
 
-Tokenizer and training are typically run via `eta_mvp_run.py`, but CLIs exist under `src/traffic_pipeline/model/`:
+Tokenizer and training are typically run via `eta_mvp_run.py`, but CLIs exist under `src/model/`:
 
 ```bash
 .venv/bin/python eta_mvp_run.py --only-tok
 .venv/bin/python eta_mvp_run.py --only-train
-.venv/bin/python src/traffic_pipeline/model/infer_hotspot.py --config configs/pipeline.toml --forecast-csv data/bronze/austin_forecast_live.csv
+.venv/bin/python src/model/infer_hotspot.py --config configs/pipeline.toml --forecast-csv data/bronze/austin_forecast_live.csv
 ```

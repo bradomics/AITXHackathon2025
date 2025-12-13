@@ -7,14 +7,14 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import numpy as np
 import torch
 
-from traffic_pipeline.config import load_config
-from traffic_pipeline.model.model_hotspot import build_model
-from traffic_pipeline.util import parse_dt
+from config import load_config
+from model.model_hotspot import build_model
+from util import parse_dt
 
 
 def _to_float(s: str) -> float:

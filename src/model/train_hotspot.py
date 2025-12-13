@@ -49,7 +49,7 @@ def train_hotspot_model(
     inc_ptr = ds["inc_ptr"].astype("int64")
     inc_idx = ds["inc_idx"].astype("int64")
 
-    from traffic_pipeline.model.model_hotspot import build_model
+    from .model_hotspot import build_model
 
     device_t = torch.device(device) if device else torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = build_model(n_features=D, n_cells=n_cells, d_model=d_model, arch=arch).to(device_t)
