@@ -226,4 +226,5 @@ client/dashboard/node_modules/
 /artifacts/
 /data/silver/
 /data/gold/
-
+/output/
+/artifacts/
