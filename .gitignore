@@ -231,3 +231,6 @@ flake.lock
 /artifacts/
 /venv/
 server/venv/
+/data/silver/
+/data/gold/
+
