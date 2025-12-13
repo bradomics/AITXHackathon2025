@@ -135,7 +135,7 @@ export function AustinHeatmapCard() {
         }),
     ];
 
-    const [mapView, setMapView] = useState('heatmap');
+    const [mapView, setMapView] = useState('digital-twin');
     const [layers, setLayers] = useState(heatmapLayers);
 
     const handleMapViewChange = (mapView: any) => {
