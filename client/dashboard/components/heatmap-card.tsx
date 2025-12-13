@@ -864,7 +864,6 @@ export function AustinHeatmapCard() {
                     </ButtonGroup>
                 </div>
             </CardHeader>
-
             <CardContent className="p-0">
                 {mapView === "heatmap" && (
                     <div className="relative h-[600px] w-full">
