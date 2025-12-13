@@ -14,7 +14,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Train hotspot predictor (Mamba/GRU) on tokenized H3 dataset")
     ap.add_argument("--config", default="configs/pipeline.toml")
     ap.add_argument("--data-dir", default=None, help="Tokenizer output dir (defaults to config tokenizer.output_dir)")
-    ap.add_argument("--epochs", type=int, default=3)
+    ap.add_argument("--epochs", type=int, default=5)
     ap.add_argument("--batch-size", type=int, default=64)
     ap.add_argument("--lr", type=float, default=3e-4)
     ap.add_argument("--d-model", type=int, default=128)
@@ -25,6 +25,7 @@ def main() -> None:
     ap.add_argument("--device", default=None, help="cpu|cuda (auto if omitted)")
     ap.add_argument("--max-train-batches", type=int, default=0, help="0=run all")
     ap.add_argument("--max-val-batches", type=int, default=0, help="0=run all")
+    ap.add_argument("--log-every", type=int, default=50, help="Log training loss every N steps (0=disable)")
     ap.add_argument("--out", default="artifacts/h3_hotspot_model.pt")
     args = ap.parse_args()
 
@@ -55,6 +56,7 @@ def main() -> None:
         max_val_batches=args.max_val_batches,
         pos_weight_coll=args.pos_weight_coll,
         pos_weight_inc=args.pos_weight_inc,
+        log_every_steps=args.log_every,
     )
 
 

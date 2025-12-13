@@ -18,7 +18,7 @@ def train_hotspot_model(
     context_steps: int,
     arch: str = "mamba",
     d_model: int = 128,
-    epochs: int = 2,
+    epochs: int = 5,
     batch_size: int = 64,
     lr: float = 1e-3,
     pos_weight_coll: float = 50.0,
@@ -27,9 +27,13 @@ def train_hotspot_model(
     device: str | None = None,
     max_train_batches: int = 0,
     max_val_batches: int = 0,
+    log_every_steps: int = 50,
 ) -> None:
     import numpy as np
     import torch
+
+    if int(epochs) <= 0:
+        raise ValueError(f"epochs must be > 0 (got {epochs})")
 
     ds = np.load(data_dir / "dataset.npz")
     meta = json.loads((data_dir / "meta.json").read_text(encoding="utf-8"))
@@ -72,10 +76,36 @@ def train_hotspot_model(
 
     Xn_t = torch.from_numpy(Xn).to(device_t)
 
+    def save_ckpt(*, path: Path, epoch: int, train_loss: float, val_loss: float) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        ckpt = {
+            "model_state": model.state_dict(),
+            "model_config": {
+                "arch": resolved_arch,
+                "d_model": d_model,
+                "n_features": D,
+                "n_cells": n_cells,
+                "context_steps": context_steps,
+            },
+            "tokenizer_meta": meta,
+            "x_mean": X_mean,
+            "x_std": X_std,
+            "data_dir": str(data_dir),
+            "train": {
+                "epoch": epoch,
+                "train_loss": float(train_loss),
+                "val_loss": float(val_loss),
+            },
+        }
+        torch.save(ckpt, path)
+
     for epoch in range(1, epochs + 1):
         model.train()
         total = 0.0
         n_batches = 0
+        train_batches_total = (len(train_idx) + batch_size - 1) // batch_size
+        if max_train_batches > 0:
+            train_batches_total = min(train_batches_total, max_train_batches)
         for bi in range(0, len(train_idx), batch_size):
             if max_train_batches > 0 and n_batches >= max_train_batches:
                 break
@@ -94,14 +124,25 @@ def train_hotspot_model(
             loss.backward()
             opt.step()
 
-            total += float(loss.detach().cpu().item())
+            loss_f = float(loss.detach().cpu().item())
+            total += loss_f
             n_batches += 1
+            if log_every_steps > 0 and (n_batches % int(log_every_steps) == 0):
+                avg = total / max(n_batches, 1)
+                print(
+                    f"[train] epoch={epoch} step={n_batches}/{train_batches_total} "
+                    f"loss={loss_f:.6f} avg={avg:.6f}",
+                    flush=True,
+                )
 
         train_loss = total / max(n_batches, 1)
 
         model.eval()
         v_total = 0.0
         v_batches = 0
+        val_batches_total = (len(val_idx) + batch_size - 1) // batch_size
+        if max_val_batches > 0:
+            val_batches_total = min(val_batches_total, max_val_batches)
         with torch.no_grad():
             for bi in range(0, len(val_idx), batch_size):
                 if max_val_batches > 0 and v_batches >= max_val_batches:
@@ -121,21 +162,15 @@ def train_hotspot_model(
                 v_batches += 1
 
         val_loss = v_total / max(v_batches, 1) if val_idx else float("nan")
-        print(f"[train] epoch={epoch} train_loss={train_loss:.6f} val_loss={val_loss:.6f}")
+        print(
+            f"[train] epoch={epoch} train_loss={train_loss:.6f} val_loss={val_loss:.6f} "
+            f"(train_batches={n_batches}/{train_batches_total} val_batches={v_batches}/{val_batches_total})",
+            flush=True,
+        )
 
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    ckpt = {
-        "model_state": model.state_dict(),
-        "model_config": {
-            "arch": resolved_arch,
-            "d_model": d_model,
-            "n_features": D,
-            "n_cells": n_cells,
-            "context_steps": context_steps,
-        },
-        "tokenizer_meta": meta,
-        "x_mean": X_mean,
-        "x_std": X_std,
-        "data_dir": str(data_dir),
-    }
-    torch.save(ckpt, out_path)
+        epoch_path = out_path.with_name(f"{out_path.stem}_epoch{epoch}{out_path.suffix}")
+        save_ckpt(path=epoch_path, epoch=epoch, train_loss=train_loss, val_loss=val_loss)
+        print(f"[train] saved {epoch_path}", flush=True)
+
+    save_ckpt(path=out_path, epoch=epochs, train_loss=train_loss, val_loss=val_loss)
+    print(f"[train] saved {out_path}", flush=True)
