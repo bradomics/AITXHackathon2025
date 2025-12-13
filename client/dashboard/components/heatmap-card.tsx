@@ -130,7 +130,7 @@ export function AustinHeatmapCard() {
         {
             ambulance: { url: "/models/ambulance.glb", sizeScale: 20, yawOffset: 90, pitch: 0, roll: 90 },
             police: { url: "/models/police-car.glb", sizeScale: 100, yawOffset: 90, pitch: 0, roll: 90 },
-            "red-car": { url: "/models/red-car.glb", sizeScale: 200, yawOffset: 90, pitch: 0, roll: 90 },
+            "red-car": { url: "/models/red-car.glb", sizeScale: 25, yawOffset: 90, pitch: 0, roll: 90 },
             "sports-car": { url: "/models/sports-car.glb", sizeScale: 2000, yawOffset: 0, pitch: 0, roll: 0 },
 
         };

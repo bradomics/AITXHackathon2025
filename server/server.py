@@ -87,7 +87,7 @@ async def broadcaster(
     hz: float,
     xy_to_lonlat: Callable[[float, float], tuple[float, float]],
 ) -> None:
-    interval = 1.0 / hz
+    interval = 0.5 / hz
 
     while True:
         # Advance SUMO one step
