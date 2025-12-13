@@ -30,13 +30,13 @@ SUMO then runs forward for the next interval with those injected vehicles.
 
 ### Install
 
-The sim server uses `torch` (already in repo `requirements.txt`) plus WebSockets:
+The sim server uses `torch` (already in repo `requirements.txt`) plus a few small deps:
 
 ```bash
 .venv/bin/python -m pip install -r sim/requirements.txt
 ```
 
-For the real SUMO engine you must have SUMO installed and `traci` importable (usually via `SUMO_HOME`).
+For the real SUMO engine, `sim/requirements.txt` includes `eclipse-sumo` (installs `sumo`/`sumo-gui` into your venv). You can also use a system SUMO install via `SUMO_HOME`.
 
 ### Train a tiny model (synthetic)
 
@@ -81,11 +81,41 @@ Then run the server using the filled baselines file:
 
 ### Run the server
 
+`eta_sim_go.py` defaults to the included Austin SUMO scenario:
+
 ```bash
-.venv/bin/python eta_sim_go.py --engine mock --controls sim/controls_example.json --model sim/artifacts/demand_gru.pt --realtime
+python3 eta_sim_go.py
 ```
 
 WebSocket default: `ws://127.0.0.1:8765`
+
+If you run with the default local-only bind, `eta_sim_go.py` prints a copy/paste SSH tunnel command for remote subscribers.
+
+### Drive a separate SUMO (digital twin subscriber)
+
+SUMO itself can’t “subscribe” to WebSockets, but a tiny TraCI client can.
+
+On the machine running the inference publisher:
+
+```bash
+python3 eta_sim_go.py
+```
+
+On the machine running the *GUI* SUMO you want to drive:
+
+```bash
+sumo-gui -c sumo/austin/sim.sumocfg --remote-port 8813
+python3 sim/ws_drive_sumo.py --ws-url ws://PUBLISHER_HOST:8765 --sumo-port 8813
+```
+
+By default, `sim/ws_drive_sumo.py` advances SUMO by one `control_interval_s` per message; add `--no-step` if you want to run/step SUMO yourself.
+
+If the GUI machine can’t reach the publisher directly, use an SSH tunnel (publisher binds to `127.0.0.1` by default):
+
+```bash
+ssh -N -L 8765:localhost:8765 asus@gx10-f3fb.local  # replace with your SSH host
+python3 sim/ws_drive_sumo.py --ws-url ws://localhost:8765 --sumo-port 8813
+```
 
 ### Run (mock engine, direct)
 
@@ -136,6 +166,8 @@ Direct server form:
 {
   "ts": "2025-12-13T10:00:00",
   "sim_time_s": 3600.0,
+  "control_interval_s": 900.0,
+  "multipliers": { "ramp_1": 1.12 },
   "controls": [
     {"control_id": "ramp_1", "edge_id": "E1", "baseline_veh_per_hour": 600.0, "multiplier": 1.12}
   ],
