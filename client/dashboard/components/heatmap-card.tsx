@@ -406,7 +406,7 @@ export function AustinHeatmapCard() {
 
     return (
         <Card className="overflow-hidden p-0">
-            <CardHeader className="p-6">
+            <CardHeader className="pt-4">
                 <CardTitle>Austin Heatmap</CardTitle>
                 <CardDescription className="pb-0 gap-0">
                     {mapView === "digital-twin" ? `Digital Twin (${wsStatus})` : "Traffic Hotspots"}
