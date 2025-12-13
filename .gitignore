@@ -233,4 +233,5 @@ flake.lock
 server/venv/
 /data/silver/
 /data/gold/
-
+/output/
+/artifacts/
