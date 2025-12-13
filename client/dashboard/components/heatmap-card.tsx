@@ -123,15 +123,19 @@ export function AustinHeatmapCard() {
         [BASELINE_POINTS, HOTSPOTS]
     );
 
+    function sumoAngleToDeckYaw(angle: number) {
+        return (90 - angle + 360) % 360;
+    }
+
     // --- Digital twin layers (multiple types) ---
     const digitalTwinLayers = useMemo(() => {
         // Per-model offsets/scales. Tweak yawOffset/pitch/roll to match your GLB "forward".
-        const MODEL: Record<VehicleType, { url: string; sizeScale: number; yawOffset: number; pitch: number; roll: number }> =
+        const MODEL: Record<VehicleType, { url: string; sizeScale: number; yawOffset: number; flip: number; pitch: number; roll: number }> =
         {
-            ambulance: { url: "/models/ambulance.glb", sizeScale: 20, yawOffset: 90, pitch: 0, roll: 90 },
-            police: { url: "/models/police-car.glb", sizeScale: 100, yawOffset: 90, pitch: 0, roll: 90 },
-            "red-car": { url: "/models/red-car.glb", sizeScale: 25, yawOffset: 90, pitch: 0, roll: 90 },
-            "sports-car": { url: "/models/sports-car.glb", sizeScale: 2000, yawOffset: 0, pitch: 0, roll: 0 },
+            ambulance: { url: "/models/ambulance.glb", sizeScale: 20, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
+            police: { url: "/models/police-car.glb", sizeScale: 100, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
+            "red-car": { url: "/models/red-car.glb", sizeScale: 5, yawOffset: 270, flip: 0, pitch: 0, roll: 90 },
+            "sports-car": { url: "/models/sports-car.glb", sizeScale: 2000, yawOffset: 0, flip: 0, pitch: 0, roll: 0 },
 
         };
 
@@ -146,8 +150,9 @@ export function AustinHeatmapCard() {
                 sizeScale: cfg.sizeScale,
                 getPosition: (d) => [d.lon, d.lat, 0],
                 getOrientation: (d) => {
-                    const yaw = (d.heading + cfg.yawOffset) % 360;
-                    return [cfg.pitch, yaw, cfg.roll]; // [pitch, yaw, roll] degrees
+                const baseYaw = sumoAngleToDeckYaw(d.heading);
+                const yaw = (baseYaw + cfg.yawOffset + cfg.flip) % 360;
+                return [cfg.pitch, yaw, cfg.roll];
                 },
                 pickable: true,
                 _lighting: "pbr",
