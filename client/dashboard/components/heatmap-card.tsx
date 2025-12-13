@@ -114,6 +114,26 @@ function buildScaledTimestamps(path: [number, number][], targetDurationS = 20) {
 }
 
 
+function incidentLonLat(i: Incident): [number, number] | null {
+    const c = i.location?.coordinates;
+    if (c && c.length === 2) return [c[0], c[1]];
+
+    const lon = i.longitude ? Number(i.longitude) : NaN;
+    const lat = i.latitude ? Number(i.latitude) : NaN;
+    if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
+
+    return [lon, lat];
+}
+
+function isCrashIncident(i: Incident) {
+    const t = (i.issue_reported ?? "").toLowerCase();
+    return t.includes("crash") || t.includes("collision");
+}
+
+
+
+
+
 const AUSTIN_CENTER = { latitude: 30.2672, longitude: -97.7431 };
 
 function makeAustinBaselineDense(weight = 0.005, step = 0.006): HeatPoint[] {
@@ -315,6 +335,24 @@ export function AustinHeatmapCard() {
     }, []);
 
 
+    const latestCrash = useMemo(() => {
+        const crashes = incidentMarkers.filter(isCrashIncident);
+
+        // because you're fetching with $order=published_date DESC, incidentMarkers[0] is often newest,
+        // but we’ll be safe and sort by published_date.
+        crashes.sort((a, b) => {
+            const ta = Date.parse(a.published_date ?? "") || 0;
+            const tb = Date.parse(b.published_date ?? "") || 0;
+            return tb - ta;
+        });
+
+        return crashes[0] ?? null;
+    }, [incidentMarkers]);
+
+    const latestCrashPos = useMemo<[number, number] | null>(() => {
+        if (!latestCrash) return null;
+        return incidentLonLat(latestCrash);
+    }, [latestCrash]);
 
 
     // -------- Heatmap stuff ---------
@@ -532,19 +570,59 @@ export function AustinHeatmapCard() {
 
 
 
+    // useEffect(() => {
+    //     const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+    //     if (!token) return;
+
+    //     // pick end = hottest collision point
+    //     const sorted = [...COLLISION_POINTS].sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0));
+    //     const end = sorted[0]?.position;
+    //     const neighbor = sorted.find((p) => p.position !== end)?.position;
+
+    //     if (!end || !neighbor) return;
+
+    //     // start = midpoint between two high-intensity collision hotspots
+    //     const start = midpoint(end, neighbor);
+
+    //     const url =
+    //         `https://api.mapbox.com/directions/v5/mapbox/driving/` +
+    //         `${start[0]},${start[1]};${end[0]},${end[1]}` +
+    //         `?geometries=geojson&overview=full&access_token=${token}`;
+
+    //     let cancelled = false;
+
+    //     (async () => {
+    //         try {
+    //             const res = await fetch(url);
+    //             const json = await res.json();
+
+    //             const coords: [number, number][] =
+    //                 json?.routes?.[0]?.geometry?.coordinates ?? [];
+
+    //             if (!coords.length || cancelled) return;
+
+    //             const timestamps = buildTimestamps(coords, 60);
+    //             setTrip({ path: coords, timestamps });
+    //         } catch {
+    //             // ignore
+    //         }
+    //     })();
+
+    //     return () => {
+    //         cancelled = true;
+    //     };
+    // }, []);
+
     useEffect(() => {
         const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
         if (!token) return;
 
-        // pick end = hottest collision point
-        const sorted = [...COLLISION_POINTS].sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0));
-        const end = sorted[0]?.position;
-        const neighbor = sorted.find((p) => p.position !== end)?.position;
+        // Wait until we actually have a crash to route to
+        if (!latestCrashPos) return;
 
-        if (!end || !neighbor) return;
-
-        // start = midpoint between two high-intensity collision hotspots
-        const start = midpoint(end, neighbor);
+        // Start point: Austin center (lon,lat)
+        const start: [number, number] = [AUSTIN_CENTER.longitude, AUSTIN_CENTER.latitude];
+        const end: [number, number] = latestCrashPos;
 
         const url =
             `https://api.mapbox.com/directions/v5/mapbox/driving/` +
@@ -558,13 +636,12 @@ export function AustinHeatmapCard() {
                 const res = await fetch(url);
                 const json = await res.json();
 
-                const coords: [number, number][] =
-                    json?.routes?.[0]?.geometry?.coordinates ?? [];
-
+                const coords: [number, number][] = json?.routes?.[0]?.geometry?.coordinates ?? [];
                 if (!coords.length || cancelled) return;
 
                 const timestamps = buildTimestamps(coords, 60);
                 setTrip({ path: coords, timestamps });
+                setCurrentTime(0); // reset animation when a new crash comes in
             } catch {
                 // ignore
             }
@@ -573,7 +650,8 @@ export function AustinHeatmapCard() {
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [latestCrashPos]);
+
 
 
     // useEffect(() => {
