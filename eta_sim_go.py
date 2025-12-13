@@ -10,8 +10,8 @@ from pathlib import Path
 def main() -> None:
     ap = argparse.ArgumentParser(description="ETA SIM: run the digital twin server (Torch inference drives the sim).")
     ap.add_argument("--engine", choices=["mock", "sumo"], default="mock")
-    ap.add_argument("--controls", default="sim/controls_example.json")
-    ap.add_argument("--model", default="sim/artifacts/demand_gru.pt")
+    ap.add_argument("--controls", default="sim/controls_counts_example_filled.json")
+    ap.add_argument("--model", default="sim/artifacts/demand_gru_counts.pt")
     ap.add_argument("--device", default="auto", help="auto|cpu|cuda")
     ap.add_argument("--ws-host", default="0.0.0.0")
     ap.add_argument("--ws-port", type=int, default=8765)
@@ -25,8 +25,10 @@ def main() -> None:
     args = ap.parse_args()
 
     repo_root = Path(__file__).resolve().parent
+    venv_python = repo_root / ".venv" / "bin" / "python"
+    python = str(venv_python) if venv_python.exists() else sys.executable
     cmd = [
-        sys.executable,
+        python,
         str(repo_root / "sim" / "digital_twin_server.py"),
         "--engine",
         args.engine,
@@ -90,4 +92,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

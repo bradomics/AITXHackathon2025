@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import gzip
 import math
 from collections import defaultdict
 from dataclasses import dataclass
@@ -109,7 +110,9 @@ def _read_aadt(aadt_stations_csv: Path) -> list[dict[str, float | str]]:
         return out
 
 
-def _build_aadt_index(stations: list[dict[str, float | str]], *, max_distance_km: float) -> dict[tuple[int, int], list[int]]:
+def _build_spatial_index(
+    points: list[dict[str, float | str]], *, max_distance_km: float
+) -> dict[tuple[int, int], list[int]]:
     if max_distance_km <= 0:
         return {}
     cell_deg = max_distance_km / 111.0
@@ -117,23 +120,23 @@ def _build_aadt_index(stations: list[dict[str, float | str]], *, max_distance_km
         return {}
 
     index: dict[tuple[int, int], list[int]] = defaultdict(list)
-    for i, s in enumerate(stations):
-        lat = float(s["latitude"])
-        lon = float(s["longitude"])
+    for i, p in enumerate(points):
+        lat = float(p["latitude"])
+        lon = float(p["longitude"])
         key = (int(lat / cell_deg), int(lon / cell_deg))
         index[key].append(i)
     return index
 
 
-def _nearest_station(
+def _nearest_point(
     *,
     lat: float,
     lon: float,
-    stations: list[dict[str, float | str]],
+    points: list[dict[str, float | str]],
     index: dict[tuple[int, int], list[int]],
     max_distance_km: float,
 ) -> tuple[dict[str, float | str] | None, float | None]:
-    if not stations or max_distance_km <= 0:
+    if not points or max_distance_km <= 0:
         return None, None
 
     cell_deg = max_distance_km / 111.0
@@ -146,15 +149,145 @@ def _nearest_station(
     best_i = None
     best_d = None
     for i in candidates:
-        s = stations[i]
-        d = haversine_km(lat, lon, float(s["latitude"]), float(s["longitude"]))
+        p = points[i]
+        d = haversine_km(lat, lon, float(p["latitude"]), float(p["longitude"]))
         if d > max_distance_km:
             continue
         if best_d is None or d < best_d:
             best_d = d
             best_i = i
 
-    return (stations[best_i], best_d) if best_i is not None else (None, None)
+    return (points[best_i], best_d) if best_i is not None else (None, None)
+
+
+def _to_float(s: str) -> float | None:
+    s = (s or "").strip()
+    if not s:
+        return None
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
+def _parse_point_wkt(s: str) -> tuple[float, float] | None:
+    s = (s or "").strip().strip('"')
+    if not s:
+        return None
+    if not s.upper().startswith("POINT"):
+        return None
+    left = s.find("(")
+    right = s.rfind(")")
+    if left == -1 or right == -1 or right <= left:
+        return None
+    inner = s[left + 1 : right].strip()
+    parts = inner.split()
+    if len(parts) < 2:
+        return None
+    try:
+        lon = float(parts[0])
+        lat = float(parts[1])
+    except ValueError:
+        return None
+    if not (lat == lat and lon == lon):
+        return None
+    return lat, lon
+
+
+def _read_radar_detectors(
+    traffic_detectors_csv: Path, *, allowed_detector_ids: set[str]
+) -> list[dict[str, float | str]]:
+    if not traffic_detectors_csv.exists() or not allowed_detector_ids:
+        return []
+
+    with traffic_detectors_csv.open("r", encoding="utf-8-sig", newline="") as f:
+        r = csv.DictReader(f)
+        if r.fieldnames is None:
+            return []
+
+        out: list[dict[str, float | str]] = []
+        for row in r:
+            det_id = (row.get("detector_id") or "").strip()
+            if not det_id or det_id not in allowed_detector_ids:
+                continue
+
+            pt = _parse_point_wkt((row.get("location") or "").strip())
+            if pt is None:
+                continue
+            lat, lon = pt
+            out.append(
+                {
+                    "detector_id": det_id,
+                    "latitude": lat,
+                    "longitude": lon,
+                }
+            )
+        return out
+
+
+def _read_radar_hourly(
+    radar_counts_dir: Path,
+    *,
+    bucket_minutes: int,
+) -> tuple[dict[tuple[str, datetime], list[float]], set[str]]:
+    """
+    Returns:
+      - (detector_id, bucket_start_dt) -> [vol_sum, speed_sum, speed_n, occ_sum, occ_n]
+      - set of detector_ids seen
+    """
+    if not radar_counts_dir.exists():
+        return {}, set()
+
+    agg: dict[tuple[str, datetime], list[float]] = {}
+    detids: set[str] = set()
+
+    files = sorted([p for p in radar_counts_dir.glob("*.gz") if not p.name.endswith(".part")])
+    for fp in files:
+        with gzip.open(fp, "rt", encoding="utf-8", newline="") as f:
+            r = csv.DictReader(f)
+            if r.fieldnames is None:
+                continue
+
+            for row in r:
+                detid = (row.get("detid") or "").strip().strip('"')
+                if not detid:
+                    continue
+                detids.add(detid)
+
+                try:
+                    year = int((row.get("year") or "").strip())
+                    month = int((row.get("month") or "").strip())
+                    day = int((row.get("day") or "").strip())
+                    hour = int((row.get("hour") or "").strip())
+                    minute = int((row.get("minute") or "").strip())
+                except ValueError:
+                    continue
+
+                dt = datetime(year, month, day, hour, minute, 0)
+                if bucket_minutes == 60:
+                    bucket_dt = dt.replace(minute=0, second=0, microsecond=0)
+                else:
+                    bucket_dt = floor_dt(dt, bucket_minutes=bucket_minutes)
+
+                key = (detid, bucket_dt)
+                rec = agg.get(key)
+                if rec is None:
+                    rec = [0.0, 0.0, 0.0, 0.0, 0.0]
+                    agg[key] = rec
+
+                vol = _to_float(row.get("volume") or "")
+                if vol is not None:
+                    rec[0] += vol
+                speed = _to_float(row.get("speed") or "")
+                if speed is not None:
+                    rec[1] += speed
+                    rec[2] += 1.0
+                occ = _to_float(row.get("occupancy") or "")
+                if occ is not None:
+                    rec[3] += occ
+                    rec[4] += 1.0
+
+    return agg, detids
 
 
 def build_hotspot_features(
@@ -162,6 +295,7 @@ def build_hotspot_features(
     silver_incidents_csv: Path,
     weather_hourly_csv: Path,
     aadt_stations_csv: Path,
+    traffic_counts_dir: Path | None,
     out_csv: Path,
     datetime_format: str,
     bucket_minutes: int,
@@ -245,7 +379,18 @@ def build_hotspot_features(
 
     weather_cols, weather_by_bucket = _read_weather(weather_hourly_csv)
     stations = _read_aadt(aadt_stations_csv)
-    station_index = _build_aadt_index(stations, max_distance_km=aadt_max_distance_km)
+    station_index = _build_spatial_index(stations, max_distance_km=aadt_max_distance_km)
+
+    radar_hourly: dict[tuple[str, datetime], list[float]] = {}
+    radar_detectors: list[dict[str, float | str]] = []
+    radar_index: dict[tuple[int, int], list[int]] = {}
+    if traffic_counts_dir is not None:
+        radar_dir = traffic_counts_dir / "counts" / "i626-g7ub"
+        detectors_csv = traffic_counts_dir / "lookups" / "qpuw-8eeb.csv"
+        if radar_dir.exists() and detectors_csv.exists():
+            radar_hourly, radar_detids = _read_radar_hourly(radar_dir, bucket_minutes=bucket_minutes)
+            radar_detectors = _read_radar_detectors(detectors_csv, allowed_detector_ids=radar_detids)
+            radar_index = _build_spatial_index(radar_detectors, max_distance_km=aadt_max_distance_km)
 
     issue_cols = [f"n_issue_{s}" for s in sorted(issue_slugs)]
     lookbacks_sorted = sorted({int(h) for h in lookback_hours if int(h) > 0})
@@ -278,6 +423,11 @@ def build_hotspot_features(
         "season",
         *issue_cols,
         *weather_cols,
+        "radar_volume",
+        "radar_speed",
+        "radar_occupancy",
+        "radar_distance_km",
+        "has_radar_counts",
         "aadt",
         "aadt_log1p",
         "aadt_year",
@@ -293,13 +443,21 @@ def build_hotspot_features(
 
         for cell_key in sorted(cell_coords.keys()):
             lat, lon = cell_coords[cell_key]
-            station, station_dist = _nearest_station(
+            station, station_dist = _nearest_point(
                 lat=lat,
                 lon=lon,
-                stations=stations,
+                points=stations,
                 index=station_index,
                 max_distance_km=aadt_max_distance_km,
             )
+            radar_det, radar_dist = _nearest_point(
+                lat=lat,
+                lon=lon,
+                points=radar_detectors,
+                index=radar_index,
+                max_distance_km=aadt_max_distance_km,
+            )
+            radar_det_id = (radar_det.get("detector_id") or "").strip() if radar_det else ""
 
             buckets = sorted(cells_to_buckets[cell_key], key=lambda s: datetime.strptime(s, datetime_format))
             bucket_dts = [datetime.strptime(b, datetime_format) for b in buckets]
@@ -392,6 +550,31 @@ def build_hotspot_features(
                     **issue_out,
                     **{c: weather.get(c, "") for c in weather_cols},
                 }
+
+                radar_rec = radar_hourly.get((radar_det_id, bucket_dt)) if radar_det_id else None
+                if radar_rec is None:
+                    out.update(
+                        {
+                            "radar_volume": "",
+                            "radar_speed": "",
+                            "radar_occupancy": "",
+                            "radar_distance_km": "" if radar_dist is None else f"{radar_dist:.3f}",
+                            "has_radar_counts": "0",
+                        }
+                    )
+                else:
+                    vol = radar_rec[0]
+                    speed = radar_rec[1] / radar_rec[2] if radar_rec[2] > 0 else float("nan")
+                    occ = radar_rec[3] / radar_rec[4] if radar_rec[4] > 0 else float("nan")
+                    out.update(
+                        {
+                            "radar_volume": f"{vol:.3f}",
+                            "radar_speed": "" if not (speed == speed) else f"{speed:.3f}",
+                            "radar_occupancy": "" if not (occ == occ) else f"{occ:.3f}",
+                            "radar_distance_km": "" if radar_dist is None else f"{radar_dist:.3f}",
+                            "has_radar_counts": "1",
+                        }
+                    )
 
                 if station is None:
                     out.update(

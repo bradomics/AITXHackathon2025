@@ -47,6 +47,38 @@ This produces a small checkpoint you can run on DGX:
 # or: .venv/bin/python sim/train_demand_gru.py --out sim/artifacts/demand_gru.pt
 ```
 
+### Train on real Austin traffic counts (radar/camera)
+
+If you’ve downloaded counts under `data/bronze/austin_traffic_counts/` (via `scripts/fetch_austin_traffic_counts.py`),
+you can train the same GRU on real per-bin volumes.
+
+Controls config additions (per control):
+
+- `radar_detids`: detector IDs for `i626-g7ub` radar counts (`detid` column)
+- `camera_device_ids`: device IDs for `sh59-i6y9` camera counts (`atd_device_id` column)
+
+The counts are typically **15-minute bins**, so set `control_interval_s` to `900` in the controls JSON.
+
+Example:
+
+```bash
+.venv/bin/python eta_sim_run.py \
+  --mode counts \
+  --controls sim/controls_counts_example.json \
+  --write-controls-out sim/controls_counts_example_filled.json \
+  --out sim/artifacts/demand_gru_counts.pt \
+  --epochs 1 --batches-per-epoch 50 --batch-size 32 --device cpu
+```
+
+Then run the server using the filled baselines file:
+
+```bash
+.venv/bin/python eta_sim_go.py \
+  --engine mock \
+  --controls sim/controls_counts_example_filled.json \
+  --model sim/artifacts/demand_gru_counts.pt
+```
+
 ### Run the server
 
 ```bash
@@ -67,6 +99,28 @@ Useful to validate wiring without SUMO:
 ### Run (SUMO engine)
 
 Provide your own Austin `.sumocfg` and a controls JSON with valid edge routes:
+
+```bash
+# Generate a controls file from the existing SUMO routes file (optional helper)
+.venv/bin/python sim/gen_controls_from_routes.py \
+  --routes-xml sumo/austin/routes.rou.xml \
+  --out sim/controls_austin_from_routes.json \
+  --top-k 50
+
+# Train a model sized to that controls file
+.venv/bin/python eta_sim_run.py --controls sim/controls_austin_from_routes.json --out sim/artifacts/demand_gru_austin.pt
+
+# Run headless SUMO + inference (requires SUMO + traci)
+.venv/bin/python eta_sim_go.py \
+  --engine sumo \
+  --sumo-cfg sumo/austin/sim.sumocfg \
+  --controls sim/controls_austin_from_routes.json \
+  --model sim/artifacts/demand_gru_austin.pt \
+  --sumo-step-s 0.1 \
+  --realtime
+```
+
+Direct server form:
 
 ```bash
 .venv/bin/python sim/digital_twin_server.py \

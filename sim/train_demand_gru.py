@@ -94,6 +94,7 @@ def main() -> None:
     ap.add_argument("--epochs", type=int, default=3)
     ap.add_argument("--batches-per-epoch", type=int, default=200)
     ap.add_argument("--batch-size", type=int, default=64)
+    ap.add_argument("--log-every", type=int, default=50, help="Print a step log every N batches (0=off)")
     ap.add_argument("--lr", type=float, default=3e-4)
     ap.add_argument("--device", default="auto", help="auto|cpu|cuda")
     ap.add_argument("--seed", type=int, default=13)
@@ -115,7 +116,7 @@ def main() -> None:
     for epoch in range(1, int(args.epochs) + 1):
         model.train()
         total = 0.0
-        for _ in range(int(args.batches_per_epoch)):
+        for step in range(1, int(args.batches_per_epoch) + 1):
             x, y = _make_batch(
                 batch_size=int(args.batch_size),
                 context_steps=cfg.context_steps,
@@ -129,13 +130,18 @@ def main() -> None:
             loss.backward()
             opt.step()
             total += float(loss.detach().cpu().item())
+            if int(args.log_every) > 0 and step % int(args.log_every) == 0:
+                print(
+                    f"[train] epoch={epoch} step={step}/{int(args.batches_per_epoch)} loss={float(loss.detach().cpu().item()):.6f}",
+                    flush=True,
+                )
 
         avg = total / max(int(args.batches_per_epoch), 1)
-        print(f"[train] epoch={epoch} mse={avg:.6f}")
+        print(f"[train] epoch={epoch} mse={avg:.6f}", flush=True)
+        save_checkpoint(Path(args.out), model=model)
+        print(f"[train] wrote {Path(args.out)}", flush=True)
 
-    out_path = Path(args.out)
-    save_checkpoint(out_path, model=model.cpu())
-    print(f"[train] wrote {out_path}")
+    # Final checkpoint is already written at the end of the last epoch.
 
 
 if __name__ == "__main__":

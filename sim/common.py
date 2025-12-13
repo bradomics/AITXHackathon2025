@@ -13,6 +13,8 @@ class ControlPoint:
     edge_id: str
     baseline_veh_per_hour: float
     route_edges: list[str] | None = None
+    radar_detids: list[str] | None = None
+    camera_device_ids: list[str] | None = None
 
 
 @dataclass(frozen=True)
@@ -35,13 +37,14 @@ def load_controls(path: Path) -> ControlsConfig:
                 edge_id=str(c["edge_id"]),
                 baseline_veh_per_hour=float(c.get("baseline_veh_per_hour", 0.0)),
                 route_edges=list(c.get("route_edges")) if c.get("route_edges") else None,
+                radar_detids=[str(x) for x in c.get("radar_detids", [])] or None,
+                camera_device_ids=[str(x) for x in c.get("camera_device_ids", [])] or None,
             )
         )
     return ControlsConfig(control_interval_s=interval_s, context_steps=context_steps, controls=controls)
 
 
 def how_sin_cos(dt: datetime) -> tuple[float, float]:
-    how = dt.weekday() * 24 + dt.hour
+    how = dt.weekday() * 24 + dt.hour + (dt.minute / 60.0)
     ang = 2.0 * math.pi * (how / 168.0)
     return math.sin(ang), math.cos(ang)
-

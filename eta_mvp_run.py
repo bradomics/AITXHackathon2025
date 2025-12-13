@@ -109,6 +109,7 @@ def _run_gold(*, config_path: str) -> None:
     incidents_path = cfg.paths.silver_dir / cfg.silverize.incidents_output_name
     weather_path = cfg.paths.silver_dir / cfg.silverize.weather_output_name
     aadt_path = cfg.paths.silver_dir / cfg.silverize.aadt_output_name
+    traffic_counts_dir = cfg.paths.bronze_dir / "austin_traffic_counts"
     out_csv = cfg.paths.gold_dir / "features" / "hotspot_features.csv"
 
     if not incidents_path.exists():
@@ -118,6 +119,7 @@ def _run_gold(*, config_path: str) -> None:
         silver_incidents_csv=incidents_path,
         weather_hourly_csv=weather_path,
         aadt_stations_csv=aadt_path,
+        traffic_counts_dir=traffic_counts_dir if traffic_counts_dir.exists() else None,
         out_csv=out_csv,
         datetime_format=cfg.silverize.datetime_format,
         bucket_minutes=cfg.features.bucket_minutes,

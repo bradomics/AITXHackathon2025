@@ -1,0 +1,22 @@
+{
+  "control_interval_s": 900,
+  "context_steps": 12,
+  "controls": [
+    {
+      "control_id": "radar_detid_20",
+      "edge_id": "E1",
+      "baseline_veh_per_hour": 287.0575866699219,
+      "radar_detids": [
+        "20"
+      ]
+    },
+    {
+      "control_id": "radar_detid_50",
+      "edge_id": "E10",
+      "baseline_veh_per_hour": 211.09474182128906,
+      "radar_detids": [
+        "50"
+      ]
+    }
+  ]
+}
