@@ -8,7 +8,9 @@ from pathlib import Path
 
 @dataclass(frozen=True)
 class SilverizeAadtStats:
+    input_rows: int
     unique_stations: int
+    output_rows: int
 
 
 def _pick_col(fieldnames: list[str], candidates: list[str]) -> str | None:
@@ -25,16 +27,19 @@ def silverize_aadt_stations(*, bronze_path: Path, out_path: Path) -> SilverizeAa
     if not bronze_path.exists():
         with out_path.open("w", encoding="utf-8", newline="") as f_out:
             csv.writer(f_out).writerow(["station_id", "year", "latitude", "longitude", "aadt", "aadt_log1p"])
-        return SilverizeAadtStats(unique_stations=0)
+        return SilverizeAadtStats(input_rows=0, unique_stations=0, output_rows=0)
 
-    with bronze_path.open("r", encoding="utf-8", newline="") as f_in:
+    with bronze_path.open("r", encoding="utf-8-sig", newline="") as f_in:
         r = csv.DictReader(f_in)
         if r.fieldnames is None:
             raise ValueError("AADT CSV missing header row")
 
-        station_col = _pick_col(r.fieldnames, ["station_id", "Station_ID", "STATION_ID", "Station ID"])
-        year_col = _pick_col(r.fieldnames, ["year", "Year", "YEAR"])
-        aadt_col = _pick_col(r.fieldnames, ["aadt", "AADT", "Annual Average Daily Traffic"])
+        station_col = _pick_col(
+            r.fieldnames,
+            ["station_id", "Station_ID", "STATION_ID", "Station ID", "TRFC_STATN_ID", "traffic_station_id"],
+        )
+        year_col = _pick_col(r.fieldnames, ["year", "Year", "YEAR", "AADT_RPT_YEAR"])
+        aadt_col = _pick_col(r.fieldnames, ["aadt", "AADT", "Annual Average Daily Traffic", "AADT_RPT_QTY"])
         lat_col = _pick_col(r.fieldnames, ["latitude", "Latitude", "LATITUDE", "lat", "Lat"])
         lon_col = _pick_col(r.fieldnames, ["longitude", "Longitude", "LONGITUDE", "lon", "Lon", "lng", "LNG"])
 
@@ -43,7 +48,9 @@ def silverize_aadt_stations(*, bronze_path: Path, out_path: Path) -> SilverizeAa
             raise ValueError(f"AADT CSV missing required columns: {', '.join(missing)}")
 
         best: dict[str, tuple[int, dict[str, str]]] = {}
+        input_rows = 0
         for row in r:
+            input_rows += 1
             sid = (row.get(station_col) or "").strip()
             if not sid:
                 continue
@@ -63,6 +70,7 @@ def silverize_aadt_stations(*, bronze_path: Path, out_path: Path) -> SilverizeAa
         )
         w.writeheader()
 
+        output_rows = 0
         for sid, (year, row) in sorted(best.items(), key=lambda kv: kv[0]):
             lat = float((row.get(lat_col) or "").strip() or "nan")
             lon = float((row.get(lon_col) or "").strip() or "nan")
@@ -77,6 +85,6 @@ def silverize_aadt_stations(*, bronze_path: Path, out_path: Path) -> SilverizeAa
                     "aadt_log1p": f"{math.log1p(aadt):.6f}" if aadt == aadt else "",
                 }
             )
+            output_rows += 1
 
-    return SilverizeAadtStats(unique_stations=len(best))
-
+    return SilverizeAadtStats(input_rows=input_rows, unique_stations=len(best), output_rows=output_rows)

@@ -6,16 +6,17 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from traffic_pipeline.util import floor_dt
+from traffic_pipeline.util import floor_dt, parse_dt
 
 
 @dataclass(frozen=True)
 class SilverizeWeatherStats:
+    input_rows: int
     output_rows: int
 
 
 def _read_rows(path: Path) -> tuple[list[str], list[list[str]]]:
-    with path.open("r", encoding="utf-8", newline="") as f:
+    with path.open("r", encoding="utf-8-sig", newline="") as f:
         rows = list(csv.reader(f))
     if not rows:
         return [], []
@@ -39,13 +40,13 @@ def silverize_weather_hourly(
     if not bronze_path.exists():
         with out_path.open("w", encoding="utf-8", newline="") as f_out:
             csv.writer(f_out).writerow(["bucket_start"])
-        return SilverizeWeatherStats(output_rows=0)
+        return SilverizeWeatherStats(input_rows=0, output_rows=0)
 
     header, rows = _read_rows(bronze_path)
     if not header:
         with out_path.open("w", encoding="utf-8", newline="") as f_out:
             csv.writer(f_out).writerow(["bucket_start"])
-        return SilverizeWeatherStats(output_rows=0)
+        return SilverizeWeatherStats(input_rows=0, output_rows=0)
 
     header_l = [h.strip() for h in header]
     dt_col = None
@@ -56,6 +57,7 @@ def silverize_weather_hourly(
     if dt_col is None:
         dt_col = header_l[0]
 
+    input_rows = len(rows)
     sums: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
     counts: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
     numeric_cols: set[str] = set()
@@ -70,7 +72,10 @@ def silverize_weather_hourly(
         dt_raw = (row.get(dt_col) or "").strip()
         if not dt_raw:
             continue
-        dt = datetime.strptime(dt_raw, datetime_format)
+        try:
+            dt = parse_dt(dt_raw, datetime_format=datetime_format)
+        except ValueError:
+            continue
         bucket = floor_dt(dt, bucket_minutes=bucket_minutes)
         bucket_str = bucket.strftime(datetime_format)
 
@@ -101,5 +106,4 @@ def silverize_weather_hourly(
                 out[col] = "" if n == 0 else f"{sums[b][col] / n:.6f}"
             w.writerow(out)
 
-    return SilverizeWeatherStats(output_rows=len(buckets_sorted))
-
+    return SilverizeWeatherStats(input_rows=input_rows, output_rows=len(buckets_sorted))
