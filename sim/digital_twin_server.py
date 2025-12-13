@@ -83,15 +83,23 @@ async def main() -> None:
         raise RuntimeError("Missing dependency: `websockets` (install sim/requirements.txt).") from e
 
     clients: set[Any] = set()
+    last_payload: dict[str, Any] | None = None
 
     async def ws_handler(ws):
         clients.add(ws)
+        if last_payload is not None:
+            try:
+                await ws.send(json.dumps(last_payload))
+            except Exception:
+                pass
         try:
             await ws.wait_closed()
         finally:
             clients.discard(ws)
 
     async def broadcast(payload: dict[str, Any]) -> None:
+        nonlocal last_payload
+        last_payload = payload
         if not clients:
             return
         msg = json.dumps(payload)
@@ -106,7 +114,7 @@ async def main() -> None:
 
     try:
         async with websockets.serve(ws_handler, args.ws_host, int(args.ws_port), ping_interval=20, ping_timeout=20):
-            print(f"[sim] ws://{args.ws_host}:{args.ws_port} engine={args.engine} device={device}")
+            print(f"[sim] ws://{args.ws_host}:{args.ws_port} engine={args.engine} device={device}", flush=True)
 
             intervals = 0
             while True:

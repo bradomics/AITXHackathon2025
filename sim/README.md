@@ -43,18 +43,26 @@ For the real SUMO engine you must have SUMO installed and `traci` importable (us
 This produces a small checkpoint you can run on DGX:
 
 ```bash
-.venv/bin/python sim/train_demand_gru.py --out sim/artifacts/demand_gru.pt
+.venv/bin/python eta_sim_run.py --controls sim/controls_example.json --out sim/artifacts/demand_gru.pt
+# or: .venv/bin/python sim/train_demand_gru.py --out sim/artifacts/demand_gru.pt
 ```
 
-### Run (mock engine)
+### Run the server
+
+```bash
+.venv/bin/python eta_sim_go.py --engine mock --controls sim/controls_example.json --model sim/artifacts/demand_gru.pt --realtime
+```
+
+WebSocket default: `ws://127.0.0.1:8765`
+
+### Run (mock engine, direct)
 
 Useful to validate wiring without SUMO:
 
 ```bash
+.venv/bin/python sim/train_demand_gru.py --out sim/artifacts/demand_gru.pt
 .venv/bin/python sim/digital_twin_server.py --engine mock --model sim/artifacts/demand_gru.pt
 ```
-
-WebSocket default: `ws://127.0.0.1:8765`
 
 ### Run (SUMO engine)
 
