@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo } from "react";
 import Map from "react-map-gl/mapbox";
 import { DeckGL } from "@deck.gl/react";
 import { HeatmapLayer } from "@deck.gl/aggregation-layers";
+import { TripsLayer } from "@deck.gl/geo-layers";
 import { ScenegraphLayer } from "@deck.gl/mesh-layers";
 
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,68 @@ type VehicleMessage = {
     t?: number;
     vehicles: Vehicle[];
 };
+
+type Trip = {
+    path: [number, number][];
+    timestamps: number[]; // seconds
+};
+
+function midpoint(a: [number, number], b: [number, number]): [number, number] {
+    return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+}
+
+// Haversine distance in meters
+function haversineMeters(a: [number, number], b: [number, number]) {
+    const toRad = (d: number) => (d * Math.PI) / 180;
+    const R = 6371000;
+    const dLat = toRad(b[1] - a[1]);
+    const dLon = toRad(b[0] - a[0]);
+    const lat1 = toRad(a[1]);
+    const lat2 = toRad(b[1]);
+
+    const s =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+
+    return 2 * R * Math.asin(Math.sqrt(s));
+}
+
+function buildTimestamps(path: [number, number][], metersPerSecond = 30) {
+    // ~15 m/s ≈ 33 mph (tweak as you like)
+    const ts: number[] = [0];
+    let acc = 0;
+
+    for (let i = 1; i < path.length; i++) {
+        acc += haversineMeters(path[i - 1], path[i]) / metersPerSecond;
+        ts.push(acc);
+    }
+    return ts;
+}
+
+function buildScaledTimestamps(path: [number, number][], targetDurationS = 20) {
+    if (path.length < 2) return [0];
+
+    const segMeters: number[] = [];
+    let total = 0;
+
+    for (let i = 1; i < path.length; i++) {
+        const m = haversineMeters(path[i - 1], path[i]);
+        segMeters.push(m);
+        total += m;
+    }
+
+    // cumulative distance ratio -> timestamps
+    const ts: number[] = [0];
+    let acc = 0;
+
+    for (let i = 0; i < segMeters.length; i++) {
+        acc += segMeters[i];
+        ts.push((acc / total) * targetDurationS);
+    }
+
+    return ts; // seconds, last = targetDurationS
+}
+
 
 const AUSTIN_CENTER = { latitude: 30.2672, longitude: -97.7431 };
 
@@ -116,11 +179,14 @@ function normalizeVehicleType(raw: unknown, vehicleId?: any): VehicleType {
 }
 
 export function AustinHeatmapCard() {
-    const [mapView, setMapView] = useState<"heatmap" | "digital-twin" | "composite-view">("digital-twin");
+    const [mapView, setMapView] = useState<"heatmap" | "digital-twin" | "composite-view">("heatmap");
     const [vehicles, setVehicles] = useState<(Vehicle & { type: VehicleType })[]>([]);
     const [wsStatus, setWsStatus] = useState<"disconnected" | "connecting" | "connected" | "error">("disconnected");
 
-    // --- Heatmap layers ---
+    const [trip, setTrip] = useState<Trip | null>(null);
+    const [currentTime, setCurrentTime] = useState(0);
+
+    // -------- Heatmap stuff ---------
     const BASELINE_POINTS: HeatPoint[] = useMemo(() => makeAustinBaselineDense(0.005, 0.006), []);
     // const HOTSPOTS: HeatPoint[] = useMemo(
     //     () => [
@@ -243,21 +309,21 @@ export function AustinHeatmapCard() {
 
     // RGBA stops (0-255). First stop is lowest intensity, last is hottest.
     const COLLISION_COLOR_RANGE: [number, number, number, number][] = [
-    [255, 80, 80, 0],
-    [255, 80, 80, 40],
-    [255, 80, 80, 90],
-    [255, 80, 80, 140],
-    [255, 80, 80, 200],
-    [255, 80, 80, 255],
+        [255, 80, 80, 0],
+        [255, 80, 80, 40],
+        [255, 80, 80, 90],
+        [255, 80, 80, 140],
+        [255, 80, 80, 200],
+        [255, 80, 80, 255],
     ];
 
     const INCIDENT_COLOR_RANGE: [number, number, number, number][] = [
-    [80, 200, 255, 0],
-    [80, 200, 255, 40],
-    [80, 200, 255, 90],
-    [80, 200, 255, 140],
-    [80, 200, 255, 200],
-    [80, 200, 255, 255],
+        [80, 200, 255, 0],
+        [80, 200, 255, 40],
+        [80, 200, 255, 90],
+        [80, 200, 255, 140],
+        [80, 200, 255, 200],
+        [80, 200, 255, 255],
     ];
 
 
@@ -299,9 +365,173 @@ export function AustinHeatmapCard() {
         [BASELINE_POINTS, INCIDENT_POINTS, COLLISION_POINTS]
     );
 
+
+
+    useEffect(() => {
+        const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+        if (!token) return;
+
+        // pick end = hottest collision point
+        const sorted = [...COLLISION_POINTS].sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0));
+        const end = sorted[0]?.position;
+        const neighbor = sorted.find((p) => p.position !== end)?.position;
+
+        if (!end || !neighbor) return;
+
+        // start = midpoint between two high-intensity collision hotspots
+        const start = midpoint(end, neighbor);
+
+        const url =
+            `https://api.mapbox.com/directions/v5/mapbox/driving/` +
+            `${start[0]},${start[1]};${end[0]},${end[1]}` +
+            `?geometries=geojson&overview=full&access_token=${token}`;
+
+        let cancelled = false;
+
+        (async () => {
+            try {
+                const res = await fetch(url);
+                const json = await res.json();
+
+                const coords: [number, number][] =
+                    json?.routes?.[0]?.geometry?.coordinates ?? [];
+
+                if (!coords.length || cancelled) return;
+
+                const timestamps = buildTimestamps(coords, 60);
+                setTrip({ path: coords, timestamps });
+            } catch {
+                // ignore
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+
+    // useEffect(() => {
+    //   if (!trip) return;
+
+    //   let raf = 0;
+    //   const start = performance.now();
+    //   const durationMs = (trip.timestamps[trip.timestamps.length - 1] ?? 1) * 1000;
+
+    //   const tick = (t: number) => {
+    //     const elapsedMs = (t - start) % durationMs;
+    //     setCurrentTime(elapsedMs / 1000); // seconds
+    //     raf = requestAnimationFrame(tick);
+    //   };
+
+    //   raf = requestAnimationFrame(tick);
+    //   return () => cancelAnimationFrame(raf);
+    // }, [trip]);
+
+    // useEffect(() => {
+    //     if (!trip) return;
+
+    //     let raf = 0;
+    //     const start = performance.now();
+    //     const durationS = trip.timestamps[trip.timestamps.length - 1] ?? 20;
+
+    //     const tick = (t: number) => {
+    //         const elapsedS = ((t - start) / 1000) % durationS;
+    //         setCurrentTime(elapsedS);
+    //         raf = requestAnimationFrame(tick);
+    //     };
+
+    //     raf = requestAnimationFrame(tick);
+    //     return () => cancelAnimationFrame(raf);
+    // }, [trip]);
+
+    // optimized for browser performance
+    useEffect(() => {
+    if (!trip) return;
+    let raf = 0;
+    let last = 0;
+    const start = performance.now();
+    const durationS = trip.timestamps.at(-1) ?? 20;
+
+    const tick = (t: number) => {
+        if (t - last > 400) { // last > 300 <--- increase this number to improve browser performance
+        last = t;
+        setCurrentTime(((t - start) / 1000) % durationS);
+        }
+        raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+    }, [trip]);
+
+
+
+    // const tripLayer = useMemo(() => {
+    //   if (!trip) return null;
+
+    //   return new TripsLayer<Trip>({
+    //     id: "ambulance-trip",
+    //     data: [trip],
+    //     getPath: (d) => d.path,
+    //     getTimestamps: (d) => d.timestamps,
+    //     currentTime,
+    //     trailLength: 12,     // seconds of trail behind it
+    //     widthMinPixels: 100,
+    //     opacity: 0.9,
+    //     // color is RGB (no alpha here)
+    //     getColor: () => [255, 80, 80],
+    //   });
+    // }, [trip, currentTime]);
+
+    // const tripLayer = useMemo(() => {
+    //     if (!trip) return null;
+
+    //     return new TripsLayer<Trip>({
+    //         id: "ambulance-trip",
+    //         data: [trip],
+    //         getPath: (d) => d.path,
+    //         getTimestamps: (d) => d.timestamps,
+    //         currentTime,
+    //         trailLength: 4,        // small trail so you SEE motion
+    //         fadeTrail: true,
+    //         widthMinPixels: 8,
+    //         opacity: 0.95,
+    //         getColor: () => [255, 80, 80],
+    //     });
+    // }, [trip, currentTime]);
+
+
+    const tripLayer = useMemo(() => {
+        if (!trip) return null;
+
+        const durationS = trip.timestamps[trip.timestamps.length - 1] ?? 20;
+
+        // Grow trail as it moves forward. Clamp so it never exceeds full duration.
+        const growingTrail = Math.min(currentTime, durationS);
+
+        return new TripsLayer<Trip>({
+            id: "ambulance-trip",
+            data: [trip],
+            getPath: (d) => d.path,
+            getTimestamps: (d) => d.timestamps,
+            currentTime,
+            trailLength: growingTrail,   // ✅ grows from 0 → full route
+            fadeTrail: true,
+            widthMinPixels: 8,
+            opacity: 0.95,
+            getColor: () => [255, 80, 80],
+        });
+    }, [trip, currentTime]);
+
+
+
+    // -------- SUMO stuff ----------
+
     function sumoAngleToDeckYaw(angle: number) {
         return (90 - angle + 360) % 360;
     }
+
 
     // --- Digital twin layers (multiple types) ---
     const digitalTwinLayers = useMemo(() => {
@@ -439,7 +669,7 @@ export function AustinHeatmapCard() {
                         <DeckGL
                             initialViewState={{ latitude: AUSTIN_CENTER.latitude, longitude: AUSTIN_CENTER.longitude, zoom: 11.5 }}
                             controller
-                            layers={heatmapLayers}
+                            layers={tripLayer ? [...heatmapLayers, tripLayer] : heatmapLayers}
                             style={{ position: "absolute", inset: 0 }}
                         >
                             <Map
