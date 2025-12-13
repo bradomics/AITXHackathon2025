@@ -103,9 +103,9 @@ export function AustinHeatmapCard() {
         id: "vehicles-scenegraph",
         data: vehicles,
         scenegraph: "/models/sports-car.glb", // put glb in /public/models/vehicle.glb
-        sizeScale: 10, // tweak for your model
+        sizeScale: 100, // tweak for your model
         getPosition: (d) => [d.lon, d.lat, 0],
-        getOrientation: (d) => [0, headingToYaw(d.heading), 0],
+        getOrientation: (d) => [0, 90, 90], // [pitch, yaw, roll]
         _lighting: "pbr",
         pickable: true,
         updateTriggers: {
