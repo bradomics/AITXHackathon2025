@@ -1,0 +1,11 @@
+<configuration>
+  <input>
+    <net-file value="austin.net.xml"/>
+  </input>
+
+  <time>
+    <step-length value="0.1"/>
+    <!-- Keep the simulation running even if there are temporarily no vehicles. -->
+    <end value="86400"/>
+  </time>
+</configuration>

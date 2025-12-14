@@ -222,8 +222,6 @@ client/.env
 client/node_modules/
 client/dashboard/node_modules/
 
-/output/
-/artifacts/
 flake.lock
 /data/silver/
 /data/gold/
