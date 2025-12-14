@@ -1,11 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { UserRole, ThemeMode } from "../types";
+import { UserRole } from "../types";
 
 const STORAGE_KEYS = {
   HAS_COMPLETED_ONBOARDING: "@app:hasCompletedOnboarding",
   HAS_COMPLETED_TUTORIAL: "@app:hasCompletedTutorial",
   USER_ROLE: "@app:userRole",
-  THEME_MODE: "@app:themeMode",
 } as const;
 
 export const storage = {
@@ -74,33 +73,6 @@ export const storage = {
     }
   },
 
-  // Theme Mode
-  async getThemeMode(): Promise<ThemeMode> {
-    try {
-      const value = await AsyncStorage.getItem(STORAGE_KEYS.THEME_MODE);
-      return (value as ThemeMode) || "system";
-    } catch (error) {
-      console.error("Error reading theme mode:", error);
-      return "system";
-    }
-  },
-
-  async setThemeMode(mode: ThemeMode): Promise<void> {
-    try {
-      await AsyncStorage.setItem(STORAGE_KEYS.THEME_MODE, mode);
-    } catch (error) {
-      console.error("Error saving theme mode:", error);
-    }
-  },
-
-  // Clear all app data
-  async clearAll(): Promise<void> {
-    try {
-      await AsyncStorage.multiRemove(Object.values(STORAGE_KEYS));
-    } catch (error) {
-      console.error("Error clearing storage:", error);
-    }
-  },
 };
 
 

@@ -2,8 +2,6 @@
 
 export type UserRole = "ems" | "roadside" | "public-safety";
 
-export type ThemeMode = "light" | "dark" | "system";
-
 export interface Vehicle {
   "vehicle-id": string | number;
   lat: number;
