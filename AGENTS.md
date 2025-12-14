@@ -63,8 +63,13 @@ python3 -m venv .venv
   - time context (`hour_of_week`, cyclic `sin/cos`, `month`, `season`)
   - EMA counts (half-life from `configs/pipeline.toml`) and time-since-last-event features
   - per-`issue_reported` type mix columns (`n_issue_*`)
+  - radar volume/speed/occupancy (if traffic radar counts are available)
   - horizon labels (`y_collisions_next_*h`, `y_traffic_incidents_next_*h`)
   - weather columns + nearest-station AADT exposure
+
+Built to scale (not a bug):
+- `src/data_pipeline/feature_factory.py` intentionally produces a wide gold feature table (lookbacks/EMA/time-since/issue mix + AADT + radar) as a proof of concept so those columns are ready to ingest once live AADT/radar streams are wired in.
+- The v1 tokenizer (`src/model/tokenizer_h3.py`) currently trains on a smaller input: 5 time features (`hour_of_week`, `how_sin`, `how_cos`, `month`, `season`) + weather columns, so the extra gold columns are not used yet.
 
 ## Training notes
 

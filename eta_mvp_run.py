@@ -50,7 +50,7 @@ def _maybe_reexec_into_venv(*, required_modules: list[str]) -> None:
 
     env = os.environ.copy()
     env["ETA_MVP_REEXEC"] = "1"
-    print(f"[env] missing {', '.join(missing)}; re-exec -> {venv_py}", flush=True)
+    print(f"[env] re-exec -> {venv_py}", flush=True)
     os.execve(
         str(venv_py),
         [str(venv_py), str(Path(__file__).resolve()), *sys.argv[1:]],
