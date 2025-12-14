@@ -223,7 +223,8 @@ export function AustinHeatmapCard() {
     const seenIncidentIdsRef = React.useRef<Set<string>>(new Set());
     const [incidentMarkers, setIncidentMarkers] = useState<Incident[]>([]);
 
-
+    const [activeTripIncidentId, setActiveTripIncidentId] = useState<string | null>(null);
+    const arrivedRef = React.useRef(false);
 
     // useEffect(() => {
     //     let isMounted = true;
@@ -356,17 +357,7 @@ export function AustinHeatmapCard() {
 
 
     // -------- Heatmap stuff ---------
-    const BASELINE_POINTS: HeatPoint[] = useMemo(() => makeAustinBaselineDense(0.005, 0.006), []);
-    // const HOTSPOTS: HeatPoint[] = useMemo(
-    //     () => [
-    //         { position: [-97.7431, 30.2672], weight: 1.2 },
-    //         { position: [-97.768, 30.285], weight: 0.9 },
-    //         { position: [-97.7219, 30.2849], weight: 0.7 },
-    //         { position: [-97.7, 30.26], weight: 1.0 },
-    //         { position: [-97.75, 30.24], weight: 1.4 },
-    //     ],
-    //     []
-    // );
+    const BASELINE_POINTS: HeatPoint[] = useMemo(() => makeAustinBaselineDense(0.005, 0.006), []);;
 
     // Generated 2025-12-13T12:39:37
     // target_bucket=2025-12-13T13:00:00
@@ -568,59 +559,14 @@ export function AustinHeatmapCard() {
         };
     }, []);
 
-
-
-    // useEffect(() => {
-    //     const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-    //     if (!token) return;
-
-    //     // pick end = hottest collision point
-    //     const sorted = [...COLLISION_POINTS].sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0));
-    //     const end = sorted[0]?.position;
-    //     const neighbor = sorted.find((p) => p.position !== end)?.position;
-
-    //     if (!end || !neighbor) return;
-
-    //     // start = midpoint between two high-intensity collision hotspots
-    //     const start = midpoint(end, neighbor);
-
-    //     const url =
-    //         `https://api.mapbox.com/directions/v5/mapbox/driving/` +
-    //         `${start[0]},${start[1]};${end[0]},${end[1]}` +
-    //         `?geometries=geojson&overview=full&access_token=${token}`;
-
-    //     let cancelled = false;
-
-    //     (async () => {
-    //         try {
-    //             const res = await fetch(url);
-    //             const json = await res.json();
-
-    //             const coords: [number, number][] =
-    //                 json?.routes?.[0]?.geometry?.coordinates ?? [];
-
-    //             if (!coords.length || cancelled) return;
-
-    //             const timestamps = buildTimestamps(coords, 60);
-    //             setTrip({ path: coords, timestamps });
-    //         } catch {
-    //             // ignore
-    //         }
-    //     })();
-
-    //     return () => {
-    //         cancelled = true;
-    //     };
-    // }, []);
-
     useEffect(() => {
         const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
         if (!token) return;
 
-        // Wait until we actually have a crash to route to
-        if (!latestCrashPos) return;
+        if (!latestCrashPos || !latestCrash?.traffic_report_id) return;
 
-        // Start point: Austin center (lon,lat)
+        const targetId = latestCrash.traffic_report_id;
+
         const start: [number, number] = [AUSTIN_CENTER.longitude, AUSTIN_CENTER.latitude];
         const end: [number, number] = latestCrashPos;
 
@@ -640,8 +586,11 @@ export function AustinHeatmapCard() {
                 if (!coords.length || cancelled) return;
 
                 const timestamps = buildTimestamps(coords, 60);
+
+                arrivedRef.current = false;
+                setActiveTripIncidentId(targetId);
                 setTrip({ path: coords, timestamps });
-                setCurrentTime(0); // reset animation when a new crash comes in
+                setCurrentTime(0);
             } catch {
                 // ignore
             }
@@ -650,99 +599,51 @@ export function AustinHeatmapCard() {
         return () => {
             cancelled = true;
         };
-    }, [latestCrashPos]);
+    }, [latestCrashPos, latestCrash?.traffic_report_id]);
 
-
-
-    // useEffect(() => {
-    //   if (!trip) return;
-
-    //   let raf = 0;
-    //   const start = performance.now();
-    //   const durationMs = (trip.timestamps[trip.timestamps.length - 1] ?? 1) * 1000;
-
-    //   const tick = (t: number) => {
-    //     const elapsedMs = (t - start) % durationMs;
-    //     setCurrentTime(elapsedMs / 1000); // seconds
-    //     raf = requestAnimationFrame(tick);
-    //   };
-
-    //   raf = requestAnimationFrame(tick);
-    //   return () => cancelAnimationFrame(raf);
-    // }, [trip]);
-
-    // useEffect(() => {
-    //     if (!trip) return;
-
-    //     let raf = 0;
-    //     const start = performance.now();
-    //     const durationS = trip.timestamps[trip.timestamps.length - 1] ?? 20;
-
-    //     const tick = (t: number) => {
-    //         const elapsedS = ((t - start) / 1000) % durationS;
-    //         setCurrentTime(elapsedS);
-    //         raf = requestAnimationFrame(tick);
-    //     };
-
-    //     raf = requestAnimationFrame(tick);
-    //     return () => cancelAnimationFrame(raf);
-    // }, [trip]);
 
     // optimized for browser performance
     useEffect(() => {
         if (!trip) return;
+
         let raf = 0;
         let last = 0;
         const start = performance.now();
         const durationS = trip.timestamps.at(-1) ?? 20;
 
         const tick = (t: number) => {
-            if (t - last > 400) { // last > 300 <--- increase this number to improve browser performance
+            if (t - last > 400) {
                 last = t;
-                setCurrentTime(((t - start) / 1000) % durationS);
+
+                const elapsedS = (t - start) / 1000;
+                const nextTime = Math.min(elapsedS, durationS);
+                setCurrentTime(nextTime);
+
+                // ✅ Arrived
+                if (nextTime >= durationS && !arrivedRef.current) {
+                    arrivedRef.current = true;
+
+                    if (activeTripIncidentId) {
+                        setIncidentMarkers((prev) =>
+                            prev.filter((i) => i.traffic_report_id !== activeTripIncidentId)
+                        );
+                    }
+
+                    // Optional: clear the trip after arrival (or keep it visible)
+                    // setTrip(null);
+                }
+
+                // stop the animation once we hit the end
+                if (nextTime >= durationS) return;
             }
+
             raf = requestAnimationFrame(tick);
         };
 
         raf = requestAnimationFrame(tick);
         return () => cancelAnimationFrame(raf);
-    }, [trip]);
+    }, [trip, activeTripIncidentId]);
 
-
-
-    // const tripLayer = useMemo(() => {
-    //   if (!trip) return null;
-
-    //   return new TripsLayer<Trip>({
-    //     id: "ambulance-trip",
-    //     data: [trip],
-    //     getPath: (d) => d.path,
-    //     getTimestamps: (d) => d.timestamps,
-    //     currentTime,
-    //     trailLength: 12,     // seconds of trail behind it
-    //     widthMinPixels: 100,
-    //     opacity: 0.9,
-    //     // color is RGB (no alpha here)
-    //     getColor: () => [255, 80, 80],
-    //   });
-    // }, [trip, currentTime]);
-
-    // const tripLayer = useMemo(() => {
-    //     if (!trip) return null;
-
-    //     return new TripsLayer<Trip>({
-    //         id: "ambulance-trip",
-    //         data: [trip],
-    //         getPath: (d) => d.path,
-    //         getTimestamps: (d) => d.timestamps,
-    //         currentTime,
-    //         trailLength: 4,        // small trail so you SEE motion
-    //         fadeTrail: true,
-    //         widthMinPixels: 8,
-    //         opacity: 0.95,
-    //         getColor: () => [255, 80, 80],
-    //     });
-    // }, [trip, currentTime]);
 
 
     const tripLayer = useMemo(() => {
@@ -812,19 +713,9 @@ export function AustinHeatmapCard() {
         return (90 - angle + 360) % 360;
     }
 
-
     // --- Digital twin layers (multiple types) ---
     const digitalTwinLayers = useMemo(() => {
         // Per-model offsets/scales. Tweak yawOffset/pitch/roll to match your GLB "forward".
-        // const MODEL: Record<VehicleType, { url: string; sizeScale: number; yawOffset: number; flip: number; pitch: number; roll: number }> =
-        // {
-        //     ambulance: { url: "/models/ambulance.glb", sizeScale: 20, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
-        //     police: { url: "/models/police-car.glb", sizeScale: 100, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
-        //     "red-car": { url: "/models/red-car.glb", sizeScale: 5, yawOffset: 270, flip: 0, pitch: 0, roll: 90 },
-        //     "sports-car": { url: "/models/sports-car.glb", sizeScale: 2000, yawOffset: 0, flip: 0, pitch: 0, roll: 0 },
-
-        // };
-
         const MODEL: Record<VehicleType, { url: string; sizeScale: number; yawOffset: number; flip: number; pitch: number; roll: number }> = {
             ambulance: { url: "/models/ambulance.glb", sizeScale: 1, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
             police: { url: "/models/police-car.glb", sizeScale: 5, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
