@@ -11,8 +11,8 @@ from sim.common import load_controls
 def main() -> None:
     ap = argparse.ArgumentParser(description="ETA SIM: train the Torch demand forecaster (synthetic or counts).")
     ap.add_argument("--mode", choices=["synthetic", "counts"], default="counts")
-    ap.add_argument("--controls", default="sim/controls_counts_example.json")
-    ap.add_argument("--out", default="sim/artifacts/demand_gru_counts.pt")
+    ap.add_argument("--controls", default="sim/controls_austin_radar_auto.json")
+    ap.add_argument("--out", default="sim/artifacts/demand_gru_counts_austin.pt")
     ap.add_argument("--epochs", type=int, default=5)
     ap.add_argument("--batches-per-epoch", type=int, default=50)
     ap.add_argument("--batch-size", type=int, default=32)
@@ -29,7 +29,7 @@ def main() -> None:
     ap.add_argument("--bin-duration-s", type=int, default=900)
     ap.add_argument("--log-mult-min", type=float, default=-2.0)
     ap.add_argument("--log-mult-max", type=float, default=2.0)
-    ap.add_argument("--write-controls-out", default="sim/controls_counts_example_filled.json")
+    ap.add_argument("--write-controls-out", default="sim/controls_austin_radar_auto_filled.json")
     args = ap.parse_args()
 
     repo_root = Path(__file__).resolve().parent

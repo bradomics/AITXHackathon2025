@@ -224,3 +224,9 @@ client/dashboard/node_modules/
 
 /output/
 /artifacts/
+/data/silver/
+/data/gold/
+/output/
+/artifacts/
+/venv/
+server/venv/

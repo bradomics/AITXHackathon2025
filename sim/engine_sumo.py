@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -110,6 +111,19 @@ class SumoSimEngine:
         n_steps = int(self.control_interval_s / self.step_length_s) if self.step_length_s > 0 else 0
         for _ in range(max(1, n_steps)):
             self._traci.simulationStep()
+
+    async def step_interval_async(self, *, yield_every_steps: int = 200) -> None:
+        """
+        Async-friendly version of step_interval() that yields to the event loop periodically.
+        This keeps the WebSocket server responsive during long SUMO intervals.
+        """
+        n_steps = int(self.control_interval_s / self.step_length_s) if self.step_length_s > 0 else 0
+        n_steps = max(1, n_steps)
+        yield_every_steps = max(1, int(yield_every_steps))
+        for i in range(n_steps):
+            self._traci.simulationStep()
+            if (i + 1) % yield_every_steps == 0:
+                await asyncio.sleep(0)
 
     @property
     def sim_time_s(self) -> float:
