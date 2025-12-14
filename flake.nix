@@ -11,6 +11,7 @@
       let
         pkgs = import nixpkgs {
           inherit system;
+          config.allowUnfree = true;
         };
       in
       {
@@ -20,6 +21,7 @@
             nodePackages.npm
             nodePackages.pnpm
             nodePackages.yarn
+            ngrok
           ];
 
           shellHook = ''
