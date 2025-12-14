@@ -1,6 +1,7 @@
 <configuration>
   <input>
     <net-file value="austin.net.xml"/>
+    <route-files value="routes.rou.xml"/>
   </input>
 
   <time>

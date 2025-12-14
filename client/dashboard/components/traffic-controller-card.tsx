@@ -246,6 +246,19 @@ export function AustinTrafficControllerCard() {
 
     const completedTripIdsRef = React.useRef<Set<string>>(new Set());
 
+    const latestVehiclesRef = React.useRef<(Vehicle & { type: VehicleType })[]>([]);
+    const rafRef = React.useRef<number | null>(null);
+    const [renderTick, setRenderTick] = useState(0); // tiny state just to trigger memo/layers
+
+    function scheduleRender() {
+        if (rafRef.current) return;
+        rafRef.current = requestAnimationFrame(() => {
+            rafRef.current = null;
+            setRenderTick((x) => (x + 1) % 1_000_000);
+        });
+    }
+
+
     const [mounted, setMounted] = React.useState(false);
     React.useEffect(() => setMounted(true), []);
 
@@ -963,10 +976,28 @@ export function AustinTrafficControllerCard() {
         return (90 - angle + 360) % 360;
     }
 
+    const vehiclesForRender = useMemo(() => latestVehiclesRef.current, [renderTick]);
+
+    function bucketByType(list: (Vehicle & { type: VehicleType })[]) {
+        const buckets: Record<VehicleType, (Vehicle & { type: VehicleType })[]> = {
+            ambulance: [],
+            police: [],
+            "red-car": [],
+            "sports-car": [],
+            cybertruck: [],
+        };
+        for (const v of list) buckets[v.type].push(v);
+        return buckets;
+    }
+
+    const buckets = useMemo(() => bucketByType(vehiclesForRender), [vehiclesForRender]);
+
     // --- Digital twin layers (multiple types) ---
     const digitalTwinLayers = useMemo(() => {
-        // Per-model offsets/scales. Tweak yawOffset/pitch/roll to match your GLB "forward".
-        const MODEL: Record<VehicleType, { url: string; sizeScale: number; yawOffset: number; flip: number; pitch: number; roll: number }> = {
+        const MODEL: Record<
+            VehicleType,
+            { url: string; sizeScale: number; yawOffset: number; flip: number; pitch: number; roll: number }
+        > = {
             ambulance: { url: "/models/ambulance.glb", sizeScale: 1, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
             police: { url: "/models/police-car.glb", sizeScale: 5, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
             "red-car": { url: "/models/red-car.glb", sizeScale: 10, yawOffset: 270, flip: 0, pitch: 0, roll: 90 },
@@ -976,7 +1007,7 @@ export function AustinTrafficControllerCard() {
 
         const mkLayer = (type: VehicleType) => {
             const cfg = MODEL[type];
-            const data = vehicles.filter((v) => v.type === type);
+            const data = buckets[type]; // ✅ use buckets built from vehiclesForRender
 
             return new ScenegraphLayer<(Vehicle & { type: VehicleType })>({
                 id: `vehicles-${type}`,
@@ -994,8 +1025,15 @@ export function AustinTrafficControllerCard() {
             });
         };
 
-        return [mkLayer("ambulance"), mkLayer("police"), mkLayer("red-car"), mkLayer("sports-car"), mkLayer("cybertruck")];
-    }, [vehicles]);
+        return [
+            mkLayer("ambulance"),
+            mkLayer("police"),
+            mkLayer("red-car"),
+            mkLayer("sports-car"),
+            mkLayer("cybertruck"),
+        ];
+    }, [buckets]); // ✅ depends on buckets, not vehicles
+
 
     // Only connect WS when digital-twin is selected
     useEffect(() => {
@@ -1033,16 +1071,18 @@ export function AustinTrafficControllerCard() {
             try {
                 const msg: VehicleMessage = JSON.parse(evt.data);
 
-                const normalized = (msg?.vehicles ?? []).map((v) => {
+                // normalize once, but don't setState
+                latestVehiclesRef.current = (msg?.vehicles ?? []).map((v) => {
                     const type = normalizeVehicleType((v as any).type, v["vehicle-id"]);
                     return { ...v, type };
                 });
 
-                setVehicles(normalized);
-            } catch {
-                // ignore bad packets
-            }
+                scheduleRender(); // coalesce bursts into 1 render/frame
+            } catch { }
         };
+
+
+
 
         return () => {
             isClosed = true;
@@ -1052,6 +1092,10 @@ export function AustinTrafficControllerCard() {
             ws = null;
         };
     }, [mapView]);
+
+
+
+
 
     const handleMapViewChange = (next: typeof mapView) => setMapView(next);
 
@@ -1086,6 +1130,7 @@ export function AustinTrafficControllerCard() {
                                     tripsLayer,
                                     incidentMarkerLayer,
                                 ].filter(Boolean) as any}
+                                useDevicePixels={1}
                             >
                                 <Map
                                     reuseMaps={true}
@@ -1112,6 +1157,7 @@ export function AustinTrafficControllerCard() {
                                 }}
                                 controller
                                 layers={digitalTwinLayers}
+                                useDevicePixels={1}
                             >
                                 <Map
                                     reuseMaps={true}
@@ -1137,6 +1183,7 @@ export function AustinTrafficControllerCard() {
                                 }}
                                 controller
                                 layers={[...heatmapLayers, ...digitalTwinLayers]}
+                                useDevicePixels={1}
                             >
                                 <Map
                                     reuseMaps={true}
