@@ -10,12 +10,17 @@ import {
   IconFileDescription,
   IconFileWord,
   IconFolder,
+  IconHelmet,
   IconHelp,
   IconInnerShadowTop,
   IconListDetails,
   IconReport,
+  IconRoad,
   IconSearch,
   IconSettings,
+  IconShield,
+  IconShieldHalf,
+  IconShieldBolt,
   IconUsers,
 } from "@tabler/icons-react"
 
@@ -32,6 +37,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { MapPin } from "lucide-react"
 
 const data = {
   user: {
@@ -41,29 +47,19 @@ const data = {
   },
   navMain: [
     {
-      title: "Dashboard",
+      title: "Public Safety / EMS",
       url: "#",
-      icon: IconDashboard,
+      icon: IconShieldHalf,
     },
     {
-      title: "Lifecycle",
+      title: "Traffic Controller / Dispatcher",
       url: "#",
-      icon: IconListDetails,
+      icon: IconRoad,
     },
     {
-      title: "Analytics",
+      title: "Truck Operator / Roadside Assistance",
       url: "#",
       icon: IconChartBar,
-    },
-    {
-      title: "Projects",
-      url: "#",
-      icon: IconFolder,
-    },
-    {
-      title: "Team",
-      url: "#",
-      icon: IconUsers,
     },
   ],
   navClouds: [
@@ -161,8 +157,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
               <a href="#">
-                <IconInnerShadowTop className="!size-5" />
-                <span className="text-base font-semibold">Ensemble Traffic Agents</span>
+                <MapPin className="!size-5" />
+                <span className="text-base font-semibold">ETA</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>

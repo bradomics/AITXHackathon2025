@@ -6,6 +6,7 @@ import Map from "react-map-gl/mapbox";
 import { DeckGL } from "@deck.gl/react";
 import { HeatmapLayer } from "@deck.gl/aggregation-layers";
 import { TripsLayer } from "@deck.gl/geo-layers";
+import { ScatterplotLayer } from "@deck.gl/layers";
 import { ScenegraphLayer } from "@deck.gl/mesh-layers";
 
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,9 @@ import { Card, CardDescription, CardHeader, CardContent, CardTitle } from "@/com
 
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
+
+import assetPlacementSafetyOutput from "../public/outputs/phase1_safety_output.json";
+
 
 (mapboxgl as any).accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
@@ -42,6 +46,39 @@ type Trip = {
     path: [number, number][];
     timestamps: number[]; // seconds
 };
+
+type Incident = {
+    traffic_report_id: string;
+    published_date?: string;
+    issue_reported?: string;
+    address?: string;
+    agency?: string;
+    latitude?: string;
+    longitude?: string;
+    location?: { type: "Point"; coordinates: [number, number] };
+};
+
+type Asset = {
+    asset_id: string;
+    asset_type: string;
+    lat: number;
+    lon: number;
+};
+
+type DispatchTrip = {
+    id: string;                 // unique trip id
+    kind: "collision" | "incident";
+    targetId: string;           // traffic_report_id
+    assetId: string;
+
+    path: [number, number][];
+    timestamps: number[];        // absolute timestamps (seconds on global clock)
+    endTime: number;             // for cleanup
+};
+
+
+const ASSET_PLACEMENT = assetPlacementSafetyOutput as any;
+
 
 function midpoint(a: [number, number], b: [number, number]): [number, number] {
     return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
@@ -98,6 +135,26 @@ function buildScaledTimestamps(path: [number, number][], targetDurationS = 20) {
 
     return ts; // seconds, last = targetDurationS
 }
+
+
+function incidentLonLat(i: Incident): [number, number] | null {
+    const c = i.location?.coordinates;
+    if (c && c.length === 2) return [c[0], c[1]];
+
+    const lon = i.longitude ? Number(i.longitude) : NaN;
+    const lat = i.latitude ? Number(i.latitude) : NaN;
+    if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
+
+    return [lon, lat];
+}
+
+function isCrashIncident(i: Incident) {
+    const t = (i.issue_reported ?? "").toLowerCase();
+    return t.includes("crash") || t.includes("collision");
+}
+
+
+
 
 
 const AUSTIN_CENTER = { latitude: 30.2672, longitude: -97.7431 };
@@ -183,21 +240,213 @@ export function AustinHeatmapCard() {
     const [vehicles, setVehicles] = useState<(Vehicle & { type: VehicleType })[]>([]);
     const [wsStatus, setWsStatus] = useState<"disconnected" | "connecting" | "connected" | "error">("disconnected");
 
-    const [trip, setTrip] = useState<Trip | null>(null);
-    const [currentTime, setCurrentTime] = useState(0);
+    const seenIncidentIdsRef = React.useRef<Set<string>>(new Set());
+    const [incidentMarkers, setIncidentMarkers] = useState<Incident[]>([]);
+
+    const completedTripIdsRef = React.useRef<Set<string>>(new Set());
+
+
+    // Trips
+    const [simTime, setSimTime] = useState(0);              // global clock (seconds)
+    const [trips, setTrips] = useState<DispatchTrip[]>([]); // active trips (max 10)
+    const dispatchedIdsRef = React.useRef<Set<string>>(new Set()); // traffic_report_id we've dispatched
+    function closestAsset(
+        assets: Asset[],
+        target: [number, number] // [lon, lat]
+    ): Asset | null {
+        let best: Asset | null = null;
+        let bestM = Infinity;
+
+        for (const a of assets) {
+            const d = haversineMeters([a.lon, a.lat], target);
+            if (d < bestM) {
+                bestM = d;
+                best = a;
+            }
+        }
+        return best;
+    }
+
+    async function routeTrip(
+        token: string,
+        start: [number, number], // [lon, lat]
+        end: [number, number]    // [lon, lat]
+    ): Promise<[number, number][]> {
+        const url =
+            `https://api.mapbox.com/directions/v5/mapbox/driving/` +
+            `${start[0]},${start[1]};${end[0]},${end[1]}` +
+            `?geometries=geojson&overview=full&access_token=${token}`;
+
+        const res = await fetch(url);
+        const json = await res.json();
+        return json?.routes?.[0]?.geometry?.coordinates ?? [];
+    }
+
+
+    // useEffect(() => {
+    //     let isMounted = true;
+
+    //     const fetchIncidents = async () => {
+    //         try {
+    //             const res = await fetch(
+    //                 "https://data.austintexas.gov/resource/dx9v-zd7x.json?$order=published_date DESC&$limit=10"
+    //             );
+    //             if (!res.ok) return;
+
+    //             const incidents = await res.json();
+
+    //             if (!isMounted || !Array.isArray(incidents)) return;
+
+    //             const newOnes = [];
+
+    //             for (const incident of incidents) {
+    //                 const id = incident.traffic_report_id;
+    //                 if (!id) continue;
+
+    //                 if (!seenIncidentIdsRef.current.has(id)) {
+    //                     seenIncidentIdsRef.current.add(id);
+    //                     newOnes.push(incident);
+    //                 }
+    //             }
+
+    //             if (newOnes.length > 0) {
+    //                 // 🔔 ALERT / HANDLE NEW EVENTS HERE
+    //                 console.log("🚨 New traffic incidents:", newOnes);
+
+    //                 // Example: browser alert (replace later)
+    //                 newOnes.forEach((i) => {
+    //                     console.log(
+    //                         `[NEW] ${i.issue_reported} @ ${i.address} (${i.agency?.trim()})`
+    //                     );
+    //                 });
+
+    //                 // Optional: setState(newOnes) if you want to render them
+    //             }
+    //         } catch (err) {
+    //             // swallow network errors
+    //         }
+    //     };
+
+    //     // initial fetch
+    //     fetchIncidents();
+
+    //     // poll every minute
+    //     const intervalId = setInterval(fetchIncidents, 60_000);
+
+    //     return () => {
+    //         isMounted = false;
+    //         clearInterval(intervalId);
+    //     };
+    // }, []);
+
+    const { collisionAssets, incidentAssets } = useMemo(() => {
+        const rawCollisions: Asset[] = (ASSET_PLACEMENT?.assets?.type1_collisions ?? []).map((a: any) => ({
+            asset_id: a.asset_id,
+            asset_type: a.asset_type,
+            lat: Number(a.lat),
+            lon: Number(a.lon),
+        }));
+
+        const rawIncidents: Asset[] = (ASSET_PLACEMENT?.assets?.type2_incidents ?? []).map((a: any) => ({
+            asset_id: a.asset_id,
+            asset_type: a.asset_type,
+            lat: Number(a.lat),
+            lon: Number(a.lon),
+        }));
+
+        const dedupe = (xs: Asset[]) => {
+            const seen = new Set<string>();
+            return xs.filter((x) => {
+                if (!x.asset_id || !Number.isFinite(x.lat) || !Number.isFinite(x.lon)) return false;
+                if (seen.has(x.asset_id)) return false;
+                seen.add(x.asset_id);
+                return true;
+            });
+        };
+
+        return {
+            collisionAssets: dedupe(rawCollisions),
+            incidentAssets: dedupe(rawIncidents),
+        };
+    }, []);
+
+
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const fetchIncidents = async () => {
+            try {
+                const res = await fetch(
+                    "https://data.austintexas.gov/resource/dx9v-zd7x.json?$order=published_date DESC&$limit=10"
+                );
+                if (!res.ok) return;
+
+                const incidents: Incident[] = await res.json();
+                if (!isMounted || !Array.isArray(incidents)) return;
+
+                const newOnes: Incident[] = [];
+
+                for (const incident of incidents) {
+                    const id = incident.traffic_report_id;
+                    if (!id) continue;
+
+                    if (!seenIncidentIdsRef.current.has(id)) {
+                        seenIncidentIdsRef.current.add(id);
+                        newOnes.push(incident);
+                    }
+                }
+
+                if (newOnes.length > 0) {
+                    // markers
+                    setIncidentMarkers((prev) => {
+                        // keep list bounded so the browser stays fast
+                        const next = [...newOnes, ...prev];
+                        return next.slice(0, 100); // keep newest 100
+                    });
+
+                    // (optional) alert/log
+                    newOnes.forEach((i) => {
+                        console.log(`[NEW] ${i.issue_reported} @ ${i.address} (${i.agency?.trim()})`);
+                    });
+                }
+            } catch {
+                // ignore
+            }
+        };
+
+        fetchIncidents();
+        const intervalId = setInterval(fetchIncidents, 60_000);
+
+        return () => {
+            isMounted = false;
+            clearInterval(intervalId);
+        };
+    }, []);
+
+
+    const latestCrash = useMemo(() => {
+        const crashes = incidentMarkers.filter(isCrashIncident);
+
+        // because you're fetching with $order=published_date DESC, incidentMarkers[0] is often newest,
+        // but we’ll be safe and sort by published_date.
+        crashes.sort((a, b) => {
+            const ta = Date.parse(a.published_date ?? "") || 0;
+            const tb = Date.parse(b.published_date ?? "") || 0;
+            return tb - ta;
+        });
+
+        return crashes[0] ?? null;
+    }, [incidentMarkers]);
+
+    const latestCrashPos = useMemo<[number, number] | null>(() => {
+        if (!latestCrash) return null;
+        return incidentLonLat(latestCrash);
+    }, [latestCrash]);
+
 
     // -------- Heatmap stuff ---------
-    const BASELINE_POINTS: HeatPoint[] = useMemo(() => makeAustinBaselineDense(0.005, 0.006), []);
-    // const HOTSPOTS: HeatPoint[] = useMemo(
-    //     () => [
-    //         { position: [-97.7431, 30.2672], weight: 1.2 },
-    //         { position: [-97.768, 30.285], weight: 0.9 },
-    //         { position: [-97.7219, 30.2849], weight: 0.7 },
-    //         { position: [-97.7, 30.26], weight: 1.0 },
-    //         { position: [-97.75, 30.24], weight: 1.4 },
-    //     ],
-    //     []
-    // );
+    const BASELINE_POINTS: HeatPoint[] = useMemo(() => makeAustinBaselineDense(0.005, 0.006), []);;
 
     // Generated 2025-12-13T12:39:37
     // target_bucket=2025-12-13T13:00:00
@@ -366,20 +615,121 @@ export function AustinHeatmapCard() {
     );
 
 
+    // Fetch the latest incidents every minute
+    useEffect(() => {
+        let isMounted = true;
+
+        const fetchIncidents = async () => {
+            try {
+                const res = await fetch(
+                    "https://data.austintexas.gov/resource/dx9v-zd7x.json?$order=published_date DESC&$limit=10"
+                );
+                if (!res.ok) return;
+
+                const data = await res.json();
+                if (isMounted) {
+                    console.log("Latest incidents:", data);
+                    // setState(data) if needed
+                }
+            } catch {
+                // ignore network errors
+            }
+        };
+
+        // run immediately
+        fetchIncidents();
+
+        // then every minute
+        const intervalId = setInterval(fetchIncidents, 60_000);
+
+        return () => {
+            isMounted = false;
+            clearInterval(intervalId);
+        };
+    }, []);
+
+    // useEffect(() => {
+    //     let raf = 0;
+    //     let last = 0;
+    //     const start = performance.now();
+
+    //     const tick = (t: number) => {
+    //         if (t - last > 400) { // update ~2.5 FPS for perf
+    //             last = t;
+
+    //             const nowS = (t - start) / 1000;
+    //             setSimTime(nowS);
+
+    //             // prune completed trips
+    //             setTrips((prev) => prev.filter((tr) => nowS <= tr.endTime + 0.25));
+    //         }
+    //         raf = requestAnimationFrame(tick);
+    //     };
+
+    //     raf = requestAnimationFrame(tick);
+    //     return () => cancelAnimationFrame(raf);
+    // }, []);
+
+    useEffect(() => {
+        let raf = 0;
+        let last = 0;
+        const start = performance.now();
+
+        const tick = (t: number) => {
+            if (t - last > 400) {
+                last = t;
+
+                const nowS = (t - start) / 1000;
+                setSimTime(nowS);
+
+                setTrips((prev) => {
+                    // trips that have completed (asset arrived)
+                    const completed = prev.filter((tr) => nowS > tr.endTime);
+
+                    if (completed.length) {
+                        // only process each completed trip once
+                        const newlyCompletedTargetIds: string[] = [];
+                        for (const tr of completed) {
+                            if (!completedTripIdsRef.current.has(tr.id)) {
+                                completedTripIdsRef.current.add(tr.id);
+                                newlyCompletedTargetIds.push(tr.targetId);
+                            }
+                        }
+
+                        if (newlyCompletedTargetIds.length) {
+                            // ✅ remove destination incident markers
+                            setIncidentMarkers((markers) =>
+                                markers.filter((m) => !newlyCompletedTargetIds.includes(m.traffic_report_id))
+                            );
+
+                            // optional: allow re-dispatch if the same traffic_report_id comes back later
+                            newlyCompletedTargetIds.forEach((id) => dispatchedIdsRef.current.delete(id));
+                        }
+                    }
+
+                    // keep trips slightly past end for smooth visuals
+                    return prev.filter((tr) => nowS <= tr.endTime + 0.25);
+                });
+            }
+
+            raf = requestAnimationFrame(tick);
+        };
+
+        raf = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(raf);
+    }, []);
+
 
     useEffect(() => {
         const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
         if (!token) return;
 
-        // pick end = hottest collision point
-        const sorted = [...COLLISION_POINTS].sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0));
-        const end = sorted[0]?.position;
-        const neighbor = sorted.find((p) => p.position !== end)?.position;
+        if (!latestCrashPos || !latestCrash?.traffic_report_id) return;
 
-        if (!end || !neighbor) return;
+        const targetId = latestCrash.traffic_report_id;
 
-        // start = midpoint between two high-intensity collision hotspots
-        const start = midpoint(end, neighbor);
+        const start: [number, number] = [AUSTIN_CENTER.longitude, AUSTIN_CENTER.latitude];
+        const end: [number, number] = latestCrashPos;
 
         const url =
             `https://api.mapbox.com/directions/v5/mapbox/driving/` +
@@ -393,13 +743,15 @@ export function AustinHeatmapCard() {
                 const res = await fetch(url);
                 const json = await res.json();
 
-                const coords: [number, number][] =
-                    json?.routes?.[0]?.geometry?.coordinates ?? [];
-
+                const coords: [number, number][] = json?.routes?.[0]?.geometry?.coordinates ?? [];
                 if (!coords.length || cancelled) return;
 
                 const timestamps = buildTimestamps(coords, 60);
+
+                arrivedRef.current = false;
+                setActiveTripIncidentId(targetId);
                 setTrip({ path: coords, timestamps });
+                setCurrentTime(0);
             } catch {
                 // ignore
             }
@@ -408,121 +760,195 @@ export function AustinHeatmapCard() {
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [latestCrashPos, latestCrash?.traffic_report_id]);
 
 
-    // useEffect(() => {
-    //   if (!trip) return;
-
-    //   let raf = 0;
-    //   const start = performance.now();
-    //   const durationMs = (trip.timestamps[trip.timestamps.length - 1] ?? 1) * 1000;
-
-    //   const tick = (t: number) => {
-    //     const elapsedMs = (t - start) % durationMs;
-    //     setCurrentTime(elapsedMs / 1000); // seconds
-    //     raf = requestAnimationFrame(tick);
-    //   };
-
-    //   raf = requestAnimationFrame(tick);
-    //   return () => cancelAnimationFrame(raf);
-    // }, [trip]);
-
+    // // optimized for browser performance
     // useEffect(() => {
     //     if (!trip) return;
 
     //     let raf = 0;
+    //     let last = 0;
     //     const start = performance.now();
-    //     const durationS = trip.timestamps[trip.timestamps.length - 1] ?? 20;
+    //     const durationS = trip.timestamps.at(-1) ?? 20;
 
     //     const tick = (t: number) => {
-    //         const elapsedS = ((t - start) / 1000) % durationS;
-    //         setCurrentTime(elapsedS);
+    //         if (t - last > 400) {
+    //             last = t;
+
+    //             const elapsedS = (t - start) / 1000;
+    //             const nextTime = Math.min(elapsedS, durationS);
+    //             setCurrentTime(nextTime);
+
+    //             // ✅ Arrived
+    //             if (nextTime >= durationS && !arrivedRef.current) {
+    //                 arrivedRef.current = true;
+
+    //                 if (activeTripIncidentId) {
+    //                     setIncidentMarkers((prev) =>
+    //                         prev.filter((i) => i.traffic_report_id !== activeTripIncidentId)
+    //                     );
+    //                 }
+
+    //                 // Optional: clear the trip after arrival (or keep it visible)
+    //                 // setTrip(null);
+    //             }
+
+    //             // stop the animation once we hit the end
+    //             if (nextTime >= durationS) return;
+    //         }
+
     //         raf = requestAnimationFrame(tick);
     //     };
 
     //     raf = requestAnimationFrame(tick);
     //     return () => cancelAnimationFrame(raf);
-    // }, [trip]);
+    // }, [trip, activeTripIncidentId]);
 
-    // optimized for browser performance
     useEffect(() => {
-    if (!trip) return;
-    let raf = 0;
-    let last = 0;
-    const start = performance.now();
-    const durationS = trip.timestamps.at(-1) ?? 20;
+        const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+        if (!token) return;
 
-    const tick = (t: number) => {
-        if (t - last > 400) { // last > 300 <--- increase this number to improve browser performance
-        last = t;
-        setCurrentTime(((t - start) / 1000) % durationS);
-        }
-        raf = requestAnimationFrame(tick);
-    };
+        // Only run this dispatcher in heatmap view (optional — remove this guard if you want always-on)
+        if (mapView !== "heatmap") return;
 
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-    }, [trip]);
+        let cancelled = false;
+
+        const dispatchOne = async (incident: Incident) => {
+            const targetId = incident.traffic_report_id;
+            if (!targetId) return;
+
+            // already dispatched?
+            if (dispatchedIdsRef.current.has(targetId)) return;
+            dispatchedIdsRef.current.add(targetId);
+
+            const end = incidentLonLat(incident);
+            if (!end) return;
+
+            const kind: "collision" | "incident" = isCrashIncident(incident) ? "collision" : "incident";
+            const pool = kind === "collision" ? collisionAssets : incidentAssets;
+            if (!pool.length) return;
+
+            const asset = closestAsset(pool, end);
+            if (!asset) return;
+
+            const start: [number, number] = [asset.lon, asset.lat];
+
+            try {
+                const coords = await routeTrip(token, start, end);
+                if (cancelled || !coords?.length) return;
+
+                // timestamps relative, then shifted to global simTime
+                const rel = buildTimestamps(coords, 60);               // tweak speed
+                const startTime = simTime;
+                const abs = rel.map((x) => x + startTime);
+                const endTime = abs[abs.length - 1] ?? startTime;
+
+                const newTrip: DispatchTrip = {
+                    id: `${kind}-${asset.asset_id}-${targetId}-${Math.round(startTime * 1000)}`,
+                    kind,
+                    targetId,
+                    assetId: asset.asset_id,
+                    path: coords,
+                    timestamps: abs,
+                    endTime,
+                };
+
+                setTrips((prev) => {
+                    // keep max 10
+                    const next = [...prev, newTrip];
+                    return next.length > 10 ? next.slice(next.length - 10) : next;
+                });
+
+                // Optional: when a trip completes, you might want to remove the marker.
+                // If you DO want that, do it in the pruning step by comparing simTime > endTime
+                // and removing incidentMarkers there (more work). For now: trip disappears, marker stays.
+            } catch {
+                // if routing fails, allow a future re-dispatch by removing from dispatched set
+                dispatchedIdsRef.current.delete(targetId);
+            }
+        };
+
+        // Dispatch for any newly-seen incident markers (your list is bounded to 100)
+        (async () => {
+            for (const inc of incidentMarkers) {
+                await dispatchOne(inc);
+
+                // Stop if we hit the max active trips
+                // (so we don't create 50 routes in one render)
+                if (cancelled) return;
+                if (trips.length >= 10) return;
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+        // IMPORTANT: include only stable deps; incidentMarkers changes should trigger dispatch
+    }, [incidentMarkers, collisionAssets, incidentAssets, mapView, simTime, trips.length]);
 
 
 
-    // const tripLayer = useMemo(() => {
-    //   if (!trip) return null;
 
-    //   return new TripsLayer<Trip>({
-    //     id: "ambulance-trip",
-    //     data: [trip],
-    //     getPath: (d) => d.path,
-    //     getTimestamps: (d) => d.timestamps,
-    //     currentTime,
-    //     trailLength: 12,     // seconds of trail behind it
-    //     widthMinPixels: 100,
-    //     opacity: 0.9,
-    //     // color is RGB (no alpha here)
-    //     getColor: () => [255, 80, 80],
-    //   });
-    // }, [trip, currentTime]);
+    const tripsLayer = useMemo(() => {
+        if (!trips.length) return null;
 
-    // const tripLayer = useMemo(() => {
-    //     if (!trip) return null;
-
-    //     return new TripsLayer<Trip>({
-    //         id: "ambulance-trip",
-    //         data: [trip],
-    //         getPath: (d) => d.path,
-    //         getTimestamps: (d) => d.timestamps,
-    //         currentTime,
-    //         trailLength: 4,        // small trail so you SEE motion
-    //         fadeTrail: true,
-    //         widthMinPixels: 8,
-    //         opacity: 0.95,
-    //         getColor: () => [255, 80, 80],
-    //     });
-    // }, [trip, currentTime]);
-
-
-    const tripLayer = useMemo(() => {
-        if (!trip) return null;
-
-        const durationS = trip.timestamps[trip.timestamps.length - 1] ?? 20;
-
-        // Grow trail as it moves forward. Clamp so it never exceeds full duration.
-        const growingTrail = Math.min(currentTime, durationS);
-
-        return new TripsLayer<Trip>({
-            id: "ambulance-trip",
-            data: [trip],
+        return new TripsLayer<DispatchTrip>({
+            id: "dispatch-trips",
+            data: trips,
             getPath: (d) => d.path,
             getTimestamps: (d) => d.timestamps,
-            currentTime,
-            trailLength: growingTrail,   // ✅ grows from 0 → full route
+            currentTime: simTime,
+
+            // trail length in seconds of *global clock*.
+            // Use a fixed trailing window (looks good with multiple trips).
+            trailLength: 25,
             fadeTrail: true,
-            widthMinPixels: 8,
+
+            widthMinPixels: 6,
             opacity: 0.95,
-            getColor: () => [255, 80, 80],
+
+            getColor: (d) => (d.kind === "collision" ? [255, 80, 80] : [80, 200, 255]),
         });
-    }, [trip, currentTime]);
+    }, [trips, simTime]);
+
+
+
+
+    const incidentMarkerLayer = useMemo(() => {
+        return new ScatterplotLayer<Incident>({
+            id: "incident-markers",
+            data: incidentMarkers,
+            getPosition: (d) => {
+                const c = d.location?.coordinates;
+                if (c?.length === 2) return [c[0], c[1], 0];
+
+                const lon = d.longitude ? Number(d.longitude) : NaN;
+                const lat = d.latitude ? Number(d.latitude) : NaN;
+                return [lon, lat, 0];
+            },
+            getRadius: 18,              // meters
+            radiusUnits: "meters",
+            radiusMinPixels: 6,
+            radiusMaxPixels: 18,
+            getFillColor: (d) => {
+                // red-ish for crashes, blue-ish otherwise
+                const t = (d.issue_reported ?? "").toLowerCase();
+                const isCrash = t.includes("crash") || t.includes("collision");
+                return isCrash ? [255, 80, 80, 220] : [80, 200, 255, 220];
+            },
+            pickable: true,
+            onClick: (info) => {
+                const d = info.object;
+                if (!d) return;
+                alert(`${d.issue_reported ?? "Incident"}\n${d.address ?? ""}\n${d.agency?.trim() ?? ""}`);
+            },
+            updateTriggers: {
+                getFillColor: incidentMarkers, // safe: list is bounded
+            },
+        });
+    }, [incidentMarkers]);
+
 
 
 
@@ -532,19 +958,9 @@ export function AustinHeatmapCard() {
         return (90 - angle + 360) % 360;
     }
 
-
     // --- Digital twin layers (multiple types) ---
     const digitalTwinLayers = useMemo(() => {
         // Per-model offsets/scales. Tweak yawOffset/pitch/roll to match your GLB "forward".
-        // const MODEL: Record<VehicleType, { url: string; sizeScale: number; yawOffset: number; flip: number; pitch: number; roll: number }> =
-        // {
-        //     ambulance: { url: "/models/ambulance.glb", sizeScale: 20, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
-        //     police: { url: "/models/police-car.glb", sizeScale: 100, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
-        //     "red-car": { url: "/models/red-car.glb", sizeScale: 5, yawOffset: 270, flip: 0, pitch: 0, roll: 90 },
-        //     "sports-car": { url: "/models/sports-car.glb", sizeScale: 2000, yawOffset: 0, flip: 0, pitch: 0, roll: 0 },
-
-        // };
-
         const MODEL: Record<VehicleType, { url: string; sizeScale: number; yawOffset: number; flip: number; pitch: number; roll: number }> = {
             ambulance: { url: "/models/ambulance.glb", sizeScale: 1, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
             police: { url: "/models/police-car.glb", sizeScale: 5, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
@@ -637,39 +1053,37 @@ export function AustinHeatmapCard() {
     return (
         <Card className="overflow-hidden p-0">
             <CardHeader className="pt-4">
-                <CardTitle>Austin Heatmap</CardTitle>
+                <CardTitle>Public Safety / EMS View</CardTitle>
                 <CardDescription className="pb-0 gap-0">
-                    {mapView === "digital-twin" ? `Digital Twin (${wsStatus})` : "Traffic Hotspots"}
+                    {mapView === "digital-twin" ? `Hospital View` : "Incident & Collision Hotspots"}
                 </CardDescription>
 
                 <div className="flex flex-col items-start pb-0">
                     <ButtonGroup>
                         <Button onClick={() => handleMapViewChange("heatmap")} variant={mapView === "heatmap" ? "default" : "outline"}>
-                            Heatmap
+                            Heatmap + Active Incidents
                         </Button>
                         <Button
                             onClick={() => handleMapViewChange("digital-twin")}
                             variant={mapView === "digital-twin" ? "default" : "outline"}
                         >
-                            Digital Twin
-                        </Button>
-                        <Button
-                            onClick={() => handleMapViewChange("composite-view")}
-                            variant={mapView === "composite-view" ? "default" : "outline"}
-                        >
-                            Composite View
+                            Hospital View
                         </Button>
                     </ButtonGroup>
                 </div>
             </CardHeader>
-
             <CardContent className="p-0">
                 {mapView === "heatmap" && (
                     <div className="relative h-[600px] w-full">
                         <DeckGL
                             initialViewState={{ latitude: AUSTIN_CENTER.latitude, longitude: AUSTIN_CENTER.longitude, zoom: 11.5 }}
                             controller
-                            layers={tripLayer ? [...heatmapLayers, tripLayer] : heatmapLayers}
+                            // layers={tripLayer ? [...heatmapLayers, tripLayer] : heatmapLayers}
+                            layers={[
+                                ...heatmapLayers,
+                                tripsLayer,
+                                incidentMarkerLayer,
+                            ].filter(Boolean) as any}
                             style={{ position: "absolute", inset: 0 }}
                         >
                             <Map
