@@ -46,24 +46,19 @@ const data = {
       icon: IconDashboard,
     },
     {
-      title: "Lifecycle",
+      title: "Public Safety",
       url: "#",
       icon: IconListDetails,
     },
     {
-      title: "Analytics",
+      title: "Traffic Controller",
+      url: "#",
+      icon: IconListDetails,
+    },
+    {
+      title: "Insurance Provider",
       url: "#",
       icon: IconChartBar,
-    },
-    {
-      title: "Projects",
-      url: "#",
-      icon: IconFolder,
-    },
-    {
-      title: "Team",
-      url: "#",
-      icon: IconUsers,
     },
   ],
   navClouds: [

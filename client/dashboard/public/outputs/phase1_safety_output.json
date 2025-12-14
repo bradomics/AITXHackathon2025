@@ -1,0 +1,1918 @@
+{
+  "generated_at": "2025-12-14T00:09:02",
+  "source": "/home/asus/AITXHackathon2025/output/phase1_output.json",
+  "target_bucket": "2025-12-13T19:00:00",
+  "params": {
+    "points_per_asset": 4,
+    "min_coverage": 2,
+    "balance_weight": 0.5,
+    "n_collision_assets": "auto",
+    "n_incident_assets": "auto"
+  },
+  "assets": {
+    "type1_collisions": [
+      {
+        "asset_id": "type1_1",
+        "asset_type": "type1",
+        "lat": 30.269735,
+        "lon": -97.740807,
+        "expected_hit": 0.053667,
+        "mean_distance_km": 2.701,
+        "covers": [
+          {
+            "lat": 30.269735,
+            "lon": -97.740807,
+            "weight": 0.035688,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.269379,
+            "lon": -97.751015,
+            "weight": 0.026956,
+            "distance_km": 0.981,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.253958,
+            "lon": -97.750023,
+            "weight": 0.023748,
+            "distance_km": 1.965,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.332827,
+            "lon": -97.703926,
+            "weight": 0.020943,
+            "distance_km": 7.858,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type1_2",
+        "asset_type": "type1",
+        "lat": 30.269735,
+        "lon": -97.740807,
+        "expected_hit": 0.053667,
+        "mean_distance_km": 2.701,
+        "covers": [
+          {
+            "lat": 30.269735,
+            "lon": -97.740807,
+            "weight": 0.035688,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.269379,
+            "lon": -97.751015,
+            "weight": 0.026956,
+            "distance_km": 0.981,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.253958,
+            "lon": -97.750023,
+            "weight": 0.023748,
+            "distance_km": 1.965,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.332827,
+            "lon": -97.703926,
+            "weight": 0.020943,
+            "distance_km": 7.858,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type1_3",
+        "asset_type": "type1",
+        "lat": 30.222755,
+        "lon": -97.758247,
+        "expected_hit": 0.051737,
+        "mean_distance_km": 6.101,
+        "covers": [
+          {
+            "lat": 30.191547,
+            "lon": -97.766472,
+            "weight": 0.033268,
+            "distance_km": 3.559,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.222397,
+            "lon": -97.768448,
+            "weight": 0.027073,
+            "distance_km": 0.981,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.222755,
+            "lon": -97.758247,
+            "weight": 0.022564,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.400961,
+            "lon": -97.744087,
+            "weight": 0.020568,
+            "distance_km": 19.862,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type1_4",
+        "asset_type": "type1",
+        "lat": 30.222755,
+        "lon": -97.758247,
+        "expected_hit": 0.051737,
+        "mean_distance_km": 6.101,
+        "covers": [
+          {
+            "lat": 30.191547,
+            "lon": -97.766472,
+            "weight": 0.033268,
+            "distance_km": 3.559,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.222397,
+            "lon": -97.768448,
+            "weight": 0.027073,
+            "distance_km": 0.981,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.222755,
+            "lon": -97.758247,
+            "weight": 0.022564,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.400961,
+            "lon": -97.744087,
+            "weight": 0.020568,
+            "distance_km": 19.862,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type1_5",
+        "asset_type": "type1",
+        "lat": 30.270092,
+        "lon": -97.730606,
+        "expected_hit": 0.050531,
+        "mean_distance_km": 4.255,
+        "covers": [
+          {
+            "lat": 30.270092,
+            "lon": -97.730606,
+            "weight": 0.03181,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.231718,
+            "lon": -97.723045,
+            "weight": 0.025474,
+            "distance_km": 4.328,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.231361,
+            "lon": -97.733246,
+            "weight": 0.02298,
+            "distance_km": 4.314,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.333529,
+            "lon": -97.68351,
+            "weight": 0.020798,
+            "distance_km": 8.379,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type1_6",
+        "asset_type": "type1",
+        "lat": 30.270092,
+        "lon": -97.730606,
+        "expected_hit": 0.050531,
+        "mean_distance_km": 4.255,
+        "covers": [
+          {
+            "lat": 30.270092,
+            "lon": -97.730606,
+            "weight": 0.03181,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.231718,
+            "lon": -97.723045,
+            "weight": 0.025474,
+            "distance_km": 4.328,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.231361,
+            "lon": -97.733246,
+            "weight": 0.02298,
+            "distance_km": 4.314,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.333529,
+            "lon": -97.68351,
+            "weight": 0.020798,
+            "distance_km": 8.379,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type1_7",
+        "asset_type": "type1",
+        "lat": 30.277267,
+        "lon": -97.746407,
+        "expected_hit": 0.051261,
+        "mean_distance_km": 6.255,
+        "covers": [
+          {
+            "lat": 30.262203,
+            "lon": -97.735214,
+            "weight": 0.031808,
+            "distance_km": 1.99,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.261848,
+            "lon": -97.745415,
+            "weight": 0.025866,
+            "distance_km": 1.717,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.277267,
+            "lon": -97.746407,
+            "weight": 0.023574,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.457523,
+            "lon": -97.670921,
+            "weight": 0.021273,
+            "distance_km": 21.312,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type1_8",
+        "asset_type": "type1",
+        "lat": 30.277267,
+        "lon": -97.746407,
+        "expected_hit": 0.051261,
+        "mean_distance_km": 6.255,
+        "covers": [
+          {
+            "lat": 30.262203,
+            "lon": -97.735214,
+            "weight": 0.031808,
+            "distance_km": 1.99,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.261848,
+            "lon": -97.745415,
+            "weight": 0.025866,
+            "distance_km": 1.717,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.277267,
+            "lon": -97.746407,
+            "weight": 0.023574,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.457523,
+            "lon": -97.670921,
+            "weight": 0.021273,
+            "distance_km": 21.312,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type1_9",
+        "asset_type": "type1",
+        "lat": 30.324942,
+        "lon": -97.708534,
+        "expected_hit": 0.050951,
+        "mean_distance_km": 2.998,
+        "covers": [
+          {
+            "lat": 30.34071,
+            "lon": -97.69931,
+            "weight": 0.031625,
+            "distance_km": 1.964,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.246782,
+            "lon": -97.73423,
+            "weight": 0.025223,
+            "distance_km": 9.034,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.324942,
+            "lon": -97.708534,
+            "weight": 0.023602,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.31741,
+            "lon": -97.702942,
+            "weight": 0.021453,
+            "distance_km": 0.995,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type1_10",
+        "asset_type": "type1",
+        "lat": 30.324942,
+        "lon": -97.708534,
+        "expected_hit": 0.050951,
+        "mean_distance_km": 2.998,
+        "covers": [
+          {
+            "lat": 30.34071,
+            "lon": -97.69931,
+            "weight": 0.031625,
+            "distance_km": 1.964,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.246782,
+            "lon": -97.73423,
+            "weight": 0.025223,
+            "distance_km": 9.034,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.324942,
+            "lon": -97.708534,
+            "weight": 0.023602,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.31741,
+            "lon": -97.702942,
+            "weight": 0.021453,
+            "distance_km": 0.995,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type1_11",
+        "asset_type": "type1",
+        "lat": 30.19944,
+        "lon": -97.761871,
+        "expected_hit": 0.050807,
+        "mean_distance_km": 2.534,
+        "covers": [
+          {
+            "lat": 30.167503,
+            "lon": -97.790482,
+            "weight": 0.030977,
+            "distance_km": 4.492,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.19944,
+            "lon": -97.761871,
+            "weight": 0.026367,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.231005,
+            "lon": -97.743446,
+            "weight": 0.022538,
+            "distance_km": 3.931,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.206612,
+            "lon": -97.777657,
+            "weight": 0.021732,
+            "distance_km": 1.714,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type1_12",
+        "asset_type": "type1",
+        "lat": 30.19944,
+        "lon": -97.761871,
+        "expected_hit": 0.050807,
+        "mean_distance_km": 2.534,
+        "covers": [
+          {
+            "lat": 30.167503,
+            "lon": -97.790482,
+            "weight": 0.030977,
+            "distance_km": 4.492,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.19944,
+            "lon": -97.761871,
+            "weight": 0.026367,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.231005,
+            "lon": -97.743446,
+            "weight": 0.022538,
+            "distance_km": 3.931,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.206612,
+            "lon": -97.777657,
+            "weight": 0.021732,
+            "distance_km": 1.714,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type1_13",
+        "asset_type": "type1",
+        "lat": 30.309525,
+        "lon": -97.707558,
+        "expected_hit": 0.050148,
+        "mean_distance_km": 8.237,
+        "covers": [
+          {
+            "lat": 30.309525,
+            "lon": -97.707558,
+            "weight": 0.030205,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.23601,
+            "lon": -97.82045,
+            "weight": 0.025229,
+            "distance_km": 13.578,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.347891,
+            "lon": -97.715111,
+            "weight": 0.023417,
+            "distance_km": 4.327,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.345551,
+            "lon": -97.556465,
+            "weight": 0.021444,
+            "distance_km": 15.045,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type1_14",
+        "asset_type": "type1",
+        "lat": 30.309525,
+        "lon": -97.707558,
+        "expected_hit": 0.050148,
+        "mean_distance_km": 8.237,
+        "covers": [
+          {
+            "lat": 30.309525,
+            "lon": -97.707558,
+            "weight": 0.030205,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.23601,
+            "lon": -97.82045,
+            "weight": 0.025229,
+            "distance_km": 13.578,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.347891,
+            "lon": -97.715111,
+            "weight": 0.023417,
+            "distance_km": 4.327,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.345551,
+            "lon": -97.556465,
+            "weight": 0.021444,
+            "distance_km": 15.045,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type1_15",
+        "asset_type": "type1",
+        "lat": 30.363306,
+        "lon": -97.716095,
+        "expected_hit": 0.051696,
+        "mean_distance_km": 1.391,
+        "covers": [
+          {
+            "lat": 30.364008,
+            "lon": -97.695679,
+            "weight": 0.030201,
+            "distance_km": 1.96,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.356476,
+            "lon": -97.690086,
+            "weight": 0.02751,
+            "distance_km": 2.608,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.363306,
+            "lon": -97.716095,
+            "weight": 0.023545,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.370836,
+            "lon": -97.721695,
+            "weight": 0.022136,
+            "distance_km": 0.995,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type1_16",
+        "asset_type": "type1",
+        "lat": 30.363306,
+        "lon": -97.716095,
+        "expected_hit": 0.051696,
+        "mean_distance_km": 1.391,
+        "covers": [
+          {
+            "lat": 30.364008,
+            "lon": -97.695679,
+            "weight": 0.030201,
+            "distance_km": 1.96,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.356476,
+            "lon": -97.690086,
+            "weight": 0.02751,
+            "distance_km": 2.608,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.363306,
+            "lon": -97.716095,
+            "weight": 0.023545,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.370836,
+            "lon": -97.721695,
+            "weight": 0.022136,
+            "distance_km": 0.995,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type1_17",
+        "asset_type": "type1",
+        "lat": 30.215223,
+        "lon": -97.752655,
+        "expected_hit": 0.049547,
+        "mean_distance_km": 3.799,
+        "covers": [
+          {
+            "lat": 30.23925,
+            "lon": -97.728638,
+            "weight": 0.029676,
+            "distance_km": 3.53,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.191187,
+            "lon": -97.776672,
+            "weight": 0.025897,
+            "distance_km": 3.531,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.215223,
+            "lon": -97.752655,
+            "weight": 0.02261,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.163204,
+            "lon": -97.693146,
+            "weight": 0.020911,
+            "distance_km": 8.135,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type1_18",
+        "asset_type": "type1",
+        "lat": 30.215223,
+        "lon": -97.752655,
+        "expected_hit": 0.049547,
+        "mean_distance_km": 3.799,
+        "covers": [
+          {
+            "lat": 30.23925,
+            "lon": -97.728638,
+            "weight": 0.029676,
+            "distance_km": 3.53,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.191187,
+            "lon": -97.776672,
+            "weight": 0.025897,
+            "distance_km": 3.531,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.215223,
+            "lon": -97.752655,
+            "weight": 0.02261,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.163204,
+            "lon": -97.693146,
+            "weight": 0.020911,
+            "distance_km": 8.135,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type1_19",
+        "asset_type": "type1",
+        "lat": 30.379772,
+        "lon": -97.686447,
+        "expected_hit": 0.049055,
+        "mean_distance_km": 6.871,
+        "covers": [
+          {
+            "lat": 30.449991,
+            "lon": -97.665321,
+            "weight": 0.028774,
+            "distance_km": 8.067,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.41778,
+            "lon": -97.704216,
+            "weight": 0.02467,
+            "distance_km": 4.557,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.254316,
+            "lon": -97.739822,
+            "weight": 0.022413,
+            "distance_km": 14.861,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.379772,
+            "lon": -97.686447,
+            "weight": 0.022253,
+            "distance_km": 0.0,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type1_20",
+        "asset_type": "type1",
+        "lat": 30.409548,
+        "lon": -97.719048,
+        "expected_hit": 0.049592,
+        "mean_distance_km": 5.195,
+        "covers": [
+          {
+            "lat": 30.449991,
+            "lon": -97.665321,
+            "weight": 0.028774,
+            "distance_km": 6.838,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.356125,
+            "lon": -97.700294,
+            "weight": 0.024659,
+            "distance_km": 6.207,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.409548,
+            "lon": -97.719048,
+            "weight": 0.024279,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.445784,
+            "lon": -97.787933,
+            "weight": 0.021472,
+            "distance_km": 7.737,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type1_21",
+        "asset_type": "type1",
+        "lat": 30.403414,
+        "lon": -97.6726,
+        "expected_hit": 0.049989,
+        "mean_distance_km": 1.558,
+        "covers": [
+          {
+            "lat": 30.426702,
+            "lon": -97.668961,
+            "weight": 0.028655,
+            "distance_km": 2.613,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.388695,
+            "lon": -97.651207,
+            "weight": 0.025271,
+            "distance_km": 2.625,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.410946,
+            "lon": -97.6782,
+            "weight": 0.023778,
+            "distance_km": 0.995,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.403414,
+            "lon": -97.6726,
+            "weight": 0.022274,
+            "distance_km": 0.0,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type1_22",
+        "asset_type": "type1",
+        "lat": 30.410946,
+        "lon": -97.6782,
+        "expected_hit": 0.049588,
+        "mean_distance_km": 4.189,
+        "covers": [
+          {
+            "lat": 30.426702,
+            "lon": -97.668961,
+            "weight": 0.028655,
+            "distance_km": 1.963,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.388695,
+            "lon": -97.651207,
+            "weight": 0.025271,
+            "distance_km": 3.581,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.410946,
+            "lon": -97.6782,
+            "weight": 0.023778,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.445784,
+            "lon": -97.787933,
+            "weight": 0.021472,
+            "distance_km": 11.212,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type1_23",
+        "asset_type": "type1",
+        "lat": 30.442114,
+        "lon": -97.669937,
+        "expected_hit": 0.049763,
+        "mean_distance_km": 8.821,
+        "covers": [
+          {
+            "lat": 30.442114,
+            "lon": -97.669937,
+            "weight": 0.027999,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.476254,
+            "lon": -97.80014,
+            "weight": 0.02776,
+            "distance_km": 13.044,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.403414,
+            "lon": -97.6726,
+            "weight": 0.022274,
+            "distance_km": 4.311,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.404915,
+            "lon": -97.851868,
+            "weight": 0.021492,
+            "distance_km": 17.928,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type1_24",
+        "asset_type": "type1",
+        "lat": 30.379772,
+        "lon": -97.686447,
+        "expected_hit": 0.048667,
+        "mean_distance_km": 6.632,
+        "covers": [
+          {
+            "lat": 30.442114,
+            "lon": -97.669937,
+            "weight": 0.027999,
+            "distance_km": 7.111,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.41778,
+            "lon": -97.704216,
+            "weight": 0.02467,
+            "distance_km": 4.557,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.254316,
+            "lon": -97.739822,
+            "weight": 0.022413,
+            "distance_km": 14.861,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.379772,
+            "lon": -97.686447,
+            "weight": 0.022253,
+            "distance_km": 0.0,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type1_25",
+        "asset_type": "type1",
+        "lat": 30.409548,
+        "lon": -97.719048,
+        "expected_hit": 0.049095,
+        "mean_distance_km": 7.425,
+        "covers": [
+          {
+            "lat": 30.476254,
+            "lon": -97.80014,
+            "weight": 0.02776,
+            "distance_km": 10.745,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.356125,
+            "lon": -97.700294,
+            "weight": 0.024659,
+            "distance_km": 6.207,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.409548,
+            "lon": -97.719048,
+            "weight": 0.024279,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.404915,
+            "lon": -97.851868,
+            "weight": 0.021492,
+            "distance_km": 12.748,
+            "cover_count": 2
+          }
+        ]
+      }
+    ],
+    "type2_incidents": [
+      {
+        "asset_id": "type2_1",
+        "asset_type": "type2",
+        "lat": 30.246782,
+        "lon": -97.73423,
+        "expected_hit": 0.014966,
+        "mean_distance_km": 1.985,
+        "covers": [
+          {
+            "lat": 30.262203,
+            "lon": -97.735214,
+            "weight": 0.012412,
+            "distance_km": 1.717,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.246782,
+            "lon": -97.73423,
+            "weight": 0.006532,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.253958,
+            "lon": -97.750023,
+            "weight": 0.005851,
+            "distance_km": 1.714,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.240669,
+            "lon": -97.687843,
+            "weight": 0.005138,
+            "distance_km": 4.507,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type2_2",
+        "asset_type": "type2",
+        "lat": 30.246782,
+        "lon": -97.73423,
+        "expected_hit": 0.014966,
+        "mean_distance_km": 1.985,
+        "covers": [
+          {
+            "lat": 30.262203,
+            "lon": -97.735214,
+            "weight": 0.012412,
+            "distance_km": 1.717,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.246782,
+            "lon": -97.73423,
+            "weight": 0.006532,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.253958,
+            "lon": -97.750023,
+            "weight": 0.005851,
+            "distance_km": 1.714,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.240669,
+            "lon": -97.687843,
+            "weight": 0.005138,
+            "distance_km": 4.507,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type2_3",
+        "asset_type": "type2",
+        "lat": 30.393782,
+        "lon": -97.728279,
+        "expected_hit": 0.013836,
+        "mean_distance_km": 5.182,
+        "covers": [
+          {
+            "lat": 30.269735,
+            "lon": -97.740807,
+            "weight": 0.010258,
+            "distance_km": 13.846,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.400961,
+            "lon": -97.744087,
+            "weight": 0.006172,
+            "distance_km": 1.713,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.393782,
+            "lon": -97.728279,
+            "weight": 0.005969,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.410946,
+            "lon": -97.6782,
+            "weight": 0.005272,
+            "distance_km": 5.168,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type2_4",
+        "asset_type": "type2",
+        "lat": 30.43108,
+        "lon": -97.766502,
+        "expected_hit": 0.013795,
+        "mean_distance_km": 6.179,
+        "covers": [
+          {
+            "lat": 30.269735,
+            "lon": -97.740807,
+            "weight": 0.010258,
+            "distance_km": 18.109,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.400961,
+            "lon": -97.744087,
+            "weight": 0.006172,
+            "distance_km": 3.979,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.43108,
+            "lon": -97.766502,
+            "weight": 0.005732,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.445784,
+            "lon": -97.787933,
+            "weight": 0.005428,
+            "distance_km": 2.626,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type2_5",
+        "asset_type": "type2",
+        "lat": 30.30164,
+        "lon": -97.712166,
+        "expected_hit": 0.013754,
+        "mean_distance_km": 2.837,
+        "covers": [
+          {
+            "lat": 30.30164,
+            "lon": -97.712166,
+            "weight": 0.009661,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.309525,
+            "lon": -97.707558,
+            "weight": 0.006779,
+            "distance_km": 0.982,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.293755,
+            "lon": -97.716774,
+            "weight": 0.0058,
+            "distance_km": 0.982,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.380121,
+            "lon": -97.676239,
+            "weight": 0.005269,
+            "distance_km": 9.383,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type2_6",
+        "asset_type": "type2",
+        "lat": 30.30164,
+        "lon": -97.712166,
+        "expected_hit": 0.013721,
+        "mean_distance_km": 3.475,
+        "covers": [
+          {
+            "lat": 30.30164,
+            "lon": -97.712166,
+            "weight": 0.009661,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.309525,
+            "lon": -97.707558,
+            "weight": 0.006779,
+            "distance_km": 0.982,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.293755,
+            "lon": -97.716774,
+            "weight": 0.0058,
+            "distance_km": 0.982,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.403414,
+            "lon": -97.6726,
+            "weight": 0.005203,
+            "distance_km": 11.937,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type2_7",
+        "asset_type": "type2",
+        "lat": 30.284443,
+        "lon": -97.762207,
+        "expected_hit": 0.013475,
+        "mean_distance_km": 2.057,
+        "covers": [
+          {
+            "lat": 30.261848,
+            "lon": -97.745415,
+            "weight": 0.009625,
+            "distance_km": 2.985,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.284443,
+            "lon": -97.762207,
+            "weight": 0.006151,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.26149,
+            "lon": -97.755615,
+            "weight": 0.005745,
+            "distance_km": 2.63,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.307751,
+            "lon": -97.758583,
+            "weight": 0.00543,
+            "distance_km": 2.615,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type2_8",
+        "asset_type": "type2",
+        "lat": 30.284443,
+        "lon": -97.762207,
+        "expected_hit": 0.013475,
+        "mean_distance_km": 2.057,
+        "covers": [
+          {
+            "lat": 30.261848,
+            "lon": -97.745415,
+            "weight": 0.009625,
+            "distance_km": 2.985,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.284443,
+            "lon": -97.762207,
+            "weight": 0.006151,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.26149,
+            "lon": -97.755615,
+            "weight": 0.005745,
+            "distance_km": 2.63,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.307751,
+            "lon": -97.758583,
+            "weight": 0.00543,
+            "distance_km": 2.615,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type2_9",
+        "asset_type": "type2",
+        "lat": 30.229204,
+        "lon": -97.794449,
+        "expected_hit": 0.013628,
+        "mean_distance_km": 3.025,
+        "covers": [
+          {
+            "lat": 30.222397,
+            "lon": -97.768448,
+            "weight": 0.009465,
+            "distance_km": 2.61,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.23601,
+            "lon": -97.82045,
+            "weight": 0.006788,
+            "distance_km": 2.61,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.229204,
+            "lon": -97.794449,
+            "weight": 0.005565,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.173941,
+            "lon": -97.826668,
+            "weight": 0.005439,
+            "distance_km": 6.881,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type2_10",
+        "asset_type": "type2",
+        "lat": 30.229204,
+        "lon": -97.794449,
+        "expected_hit": 0.013468,
+        "mean_distance_km": 3.844,
+        "covers": [
+          {
+            "lat": 30.222397,
+            "lon": -97.768448,
+            "weight": 0.009465,
+            "distance_km": 2.61,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.23601,
+            "lon": -97.82045,
+            "weight": 0.006788,
+            "distance_km": 2.61,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.229204,
+            "lon": -97.794449,
+            "weight": 0.005565,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.278688,
+            "lon": -97.705589,
+            "weight": 0.005117,
+            "distance_km": 10.155,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type2_11",
+        "asset_type": "type2",
+        "lat": 30.276552,
+        "lon": -97.766815,
+        "expected_hit": 0.013506,
+        "mean_distance_km": 5.04,
+        "covers": [
+          {
+            "lat": 30.269379,
+            "lon": -97.751015,
+            "weight": 0.00941,
+            "distance_km": 1.714,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.276552,
+            "lon": -97.766815,
+            "weight": 0.00651,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.268305,
+            "lon": -97.781624,
+            "weight": 0.005888,
+            "distance_km": 1.692,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.403414,
+            "lon": -97.6726,
+            "weight": 0.005203,
+            "distance_km": 16.755,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type2_12",
+        "asset_type": "type2",
+        "lat": 30.276552,
+        "lon": -97.766815,
+        "expected_hit": 0.013468,
+        "mean_distance_km": 6.433,
+        "covers": [
+          {
+            "lat": 30.269379,
+            "lon": -97.751015,
+            "weight": 0.00941,
+            "distance_km": 1.714,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.276552,
+            "lon": -97.766815,
+            "weight": 0.00651,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.268305,
+            "lon": -97.781624,
+            "weight": 0.005888,
+            "distance_km": 1.692,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.477318,
+            "lon": -97.769478,
+            "weight": 0.005127,
+            "distance_km": 22.326,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type2_13",
+        "asset_type": "type2",
+        "lat": 30.223114,
+        "lon": -97.748055,
+        "expected_hit": 0.012993,
+        "mean_distance_km": 1.138,
+        "covers": [
+          {
+            "lat": 30.215223,
+            "lon": -97.752655,
+            "weight": 0.008688,
+            "distance_km": 0.982,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.231005,
+            "lon": -97.743446,
+            "weight": 0.006164,
+            "distance_km": 0.983,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.223114,
+            "lon": -97.748055,
+            "weight": 0.005796,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.231718,
+            "lon": -97.723045,
+            "weight": 0.005339,
+            "distance_km": 2.586,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type2_14",
+        "asset_type": "type2",
+        "lat": 30.223114,
+        "lon": -97.748055,
+        "expected_hit": 0.012993,
+        "mean_distance_km": 1.138,
+        "covers": [
+          {
+            "lat": 30.215223,
+            "lon": -97.752655,
+            "weight": 0.008688,
+            "distance_km": 0.982,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.231005,
+            "lon": -97.743446,
+            "weight": 0.006164,
+            "distance_km": 0.983,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.223114,
+            "lon": -97.748055,
+            "weight": 0.005796,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.231718,
+            "lon": -97.723045,
+            "weight": 0.005339,
+            "distance_km": 2.586,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type2_15",
+        "asset_type": "type2",
+        "lat": 30.41778,
+        "lon": -97.704216,
+        "expected_hit": 0.013181,
+        "mean_distance_km": 4.581,
+        "covers": [
+          {
+            "lat": 30.34071,
+            "lon": -97.69931,
+            "weight": 0.008189,
+            "distance_km": 8.583,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.41778,
+            "lon": -97.704216,
+            "weight": 0.006792,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.370836,
+            "lon": -97.721695,
+            "weight": 0.005974,
+            "distance_km": 5.483,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.442114,
+            "lon": -97.669937,
+            "weight": 0.005406,
+            "distance_km": 4.257,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type2_16",
+        "asset_type": "type2",
+        "lat": 30.370836,
+        "lon": -97.721695,
+        "expected_hit": 0.013121,
+        "mean_distance_km": 3.761,
+        "covers": [
+          {
+            "lat": 30.34071,
+            "lon": -97.69931,
+            "weight": 0.008189,
+            "distance_km": 3.979,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.378016,
+            "lon": -97.737503,
+            "weight": 0.006672,
+            "distance_km": 1.714,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.370836,
+            "lon": -97.721695,
+            "weight": 0.005974,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.442114,
+            "lon": -97.669937,
+            "weight": 0.005406,
+            "distance_km": 9.352,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type2_17",
+        "asset_type": "type2",
+        "lat": 30.338587,
+        "lon": -97.760559,
+        "expected_hit": 0.012689,
+        "mean_distance_km": 12.762,
+        "covers": [
+          {
+            "lat": 30.191547,
+            "lon": -97.766472,
+            "weight": 0.007998,
+            "distance_km": 16.36,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.167503,
+            "lon": -97.790482,
+            "weight": 0.006756,
+            "distance_km": 19.24,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.338587,
+            "lon": -97.760559,
+            "weight": 0.005497,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.477318,
+            "lon": -97.769478,
+            "weight": 0.005127,
+            "distance_km": 15.45,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type2_18",
+        "asset_type": "type2",
+        "lat": 30.191547,
+        "lon": -97.766472,
+        "expected_hit": 0.012655,
+        "mean_distance_km": 5.24,
+        "covers": [
+          {
+            "lat": 30.191547,
+            "lon": -97.766472,
+            "weight": 0.007998,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.167503,
+            "lon": -97.790482,
+            "weight": 0.006756,
+            "distance_km": 3.532,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.173941,
+            "lon": -97.826668,
+            "weight": 0.005439,
+            "distance_km": 6.108,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.278688,
+            "lon": -97.705589,
+            "weight": 0.005117,
+            "distance_km": 11.318,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type2_19",
+        "asset_type": "type2",
+        "lat": 30.333529,
+        "lon": -97.68351,
+        "expected_hit": 0.012205,
+        "mean_distance_km": 5.123,
+        "covers": [
+          {
+            "lat": 30.270092,
+            "lon": -97.730606,
+            "weight": 0.007383,
+            "distance_km": 8.379,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.385546,
+            "lon": -97.743103,
+            "weight": 0.006097,
+            "distance_km": 8.133,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.303396,
+            "lon": -97.661156,
+            "weight": 0.005598,
+            "distance_km": 3.979,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.333529,
+            "lon": -97.68351,
+            "weight": 0.005333,
+            "distance_km": 0.0,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type2_20",
+        "asset_type": "type2",
+        "lat": 30.333529,
+        "lon": -97.68351,
+        "expected_hit": 0.012205,
+        "mean_distance_km": 5.123,
+        "covers": [
+          {
+            "lat": 30.270092,
+            "lon": -97.730606,
+            "weight": 0.007383,
+            "distance_km": 8.379,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.385546,
+            "lon": -97.743103,
+            "weight": 0.006097,
+            "distance_km": 8.133,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.303396,
+            "lon": -97.661156,
+            "weight": 0.005598,
+            "distance_km": 3.979,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.333529,
+            "lon": -97.68351,
+            "weight": 0.005333,
+            "distance_km": 0.0,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type2_21",
+        "asset_type": "type2",
+        "lat": 30.362246,
+        "lon": -97.746727,
+        "expected_hit": 0.01212,
+        "mean_distance_km": 5.413,
+        "covers": [
+          {
+            "lat": 30.332827,
+            "lon": -97.703926,
+            "weight": 0.007014,
+            "distance_km": 5.251,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.362246,
+            "lon": -97.746727,
+            "weight": 0.006221,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.43108,
+            "lon": -97.766502,
+            "weight": 0.005732,
+            "distance_km": 7.885,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.410946,
+            "lon": -97.6782,
+            "weight": 0.005272,
+            "distance_km": 8.516,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type2_22",
+        "asset_type": "type2",
+        "lat": 30.362246,
+        "lon": -97.746727,
+        "expected_hit": 0.012,
+        "mean_distance_km": 3.811,
+        "covers": [
+          {
+            "lat": 30.332827,
+            "lon": -97.703926,
+            "weight": 0.007014,
+            "distance_km": 5.251,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.362246,
+            "lon": -97.746727,
+            "weight": 0.006221,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.338587,
+            "lon": -97.760559,
+            "weight": 0.005497,
+            "distance_km": 2.947,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.380121,
+            "lon": -97.676239,
+            "weight": 0.005269,
+            "distance_km": 7.048,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type2_23",
+        "asset_type": "type2",
+        "lat": 30.277981,
+        "lon": -97.725998,
+        "expected_hit": 0.011893,
+        "mean_distance_km": 4.049,
+        "covers": [
+          {
+            "lat": 30.229567,
+            "lon": -97.784248,
+            "weight": 0.006849,
+            "distance_km": 7.764,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.324942,
+            "lon": -97.708534,
+            "weight": 0.006073,
+            "distance_km": 5.484,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.254316,
+            "lon": -97.739822,
+            "weight": 0.00569,
+            "distance_km": 2.947,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.277981,
+            "lon": -97.725998,
+            "weight": 0.005175,
+            "distance_km": 0.0,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type2_24",
+        "asset_type": "type2",
+        "lat": 30.277981,
+        "lon": -97.725998,
+        "expected_hit": 0.011893,
+        "mean_distance_km": 4.049,
+        "covers": [
+          {
+            "lat": 30.229567,
+            "lon": -97.784248,
+            "weight": 0.006849,
+            "distance_km": 7.764,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.324942,
+            "lon": -97.708534,
+            "weight": 0.006073,
+            "distance_km": 5.484,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.254316,
+            "lon": -97.739822,
+            "weight": 0.00569,
+            "distance_km": 2.947,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.277981,
+            "lon": -97.725998,
+            "weight": 0.005175,
+            "distance_km": 0.0,
+            "cover_count": 2
+          }
+        ]
+      },
+      {
+        "asset_id": "type2_25",
+        "asset_type": "type2",
+        "lat": 30.393782,
+        "lon": -97.728279,
+        "expected_hit": 0.01243,
+        "mean_distance_km": 3.406,
+        "covers": [
+          {
+            "lat": 30.41778,
+            "lon": -97.704216,
+            "weight": 0.006792,
+            "distance_km": 3.528,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.378016,
+            "lon": -97.737503,
+            "weight": 0.006672,
+            "distance_km": 1.964,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.393782,
+            "lon": -97.728279,
+            "weight": 0.005969,
+            "distance_km": 0.0,
+            "cover_count": 2
+          },
+          {
+            "lat": 30.445784,
+            "lon": -97.787933,
+            "weight": 0.005428,
+            "distance_km": 8.134,
+            "cover_count": 2
+          }
+        ]
+      }
+    ]
+  }
+}
