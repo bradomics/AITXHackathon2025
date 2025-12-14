@@ -8,8 +8,11 @@ from datetime import datetime
 def floor_dt(dt: datetime, *, bucket_minutes: int) -> datetime:
     if bucket_minutes <= 0:
         raise ValueError("bucket_minutes must be > 0")
-    minutes = (dt.minute // bucket_minutes) * bucket_minutes
-    return dt.replace(minute=minutes, second=0, microsecond=0)
+    minutes_since_midnight = dt.hour * 60 + dt.minute
+    bucket_start = (minutes_since_midnight // bucket_minutes) * bucket_minutes
+    hour = bucket_start // 60
+    minute = bucket_start % 60
+    return dt.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
 
 def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:

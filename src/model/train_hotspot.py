@@ -39,11 +39,7 @@ def train_hotspot_model(
     meta = json.loads((data_dir / "meta.json").read_text(encoding="utf-8"))
 
     X = ds["X"].astype("float32")
-    X_mean = ds["X_mean"].astype("float32")
-    X_std = ds["X_std"].astype("float32")
-    Xn = (X - X_mean) / X_std
-
-    T, D = Xn.shape
+    T, D = X.shape
     n_cells = int(meta["n_cells"])
     if T <= context_steps:
         raise ValueError(f"Need T > context_steps (T={T}, context_steps={context_steps})")
@@ -73,6 +69,14 @@ def train_hotspot_model(
     split = min(max(split, 0), len(indices))
     train_idx = indices[:split]
     val_idx = indices[split:] if split < len(indices) else []
+
+    # Train-only normalization (TrafficMamba-style hygiene): compute mean/std using only time steps reachable by train windows.
+    scale_end = min(max(context_steps + max(split, 1), context_steps + 1), T)
+    X_train = X[:scale_end]
+    X_mean = X_train.mean(axis=0).astype(np.float32)
+    X_std = X_train.std(axis=0).astype(np.float32)
+    X_std = np.where(X_std == 0, 1.0, X_std).astype(np.float32)
+    Xn = ((X - X_mean) / X_std).astype(np.float32)
 
     Xn_t = torch.from_numpy(Xn).to(device_t)
 

@@ -47,12 +47,21 @@ class TrainConfig:
 
 
 @dataclass(frozen=True)
+class HotspotV2Config:
+    output_dir: Path
+    runtime_dir: Path
+    neg_per_hour: int
+    seed_hours: int
+
+
+@dataclass(frozen=True)
 class PipelineConfig:
     paths: PathsConfig
     silverize: SilverizeConfig
     features: FeaturesConfig
     tokenizer: TokenizerConfig
     train: TrainConfig
+    hotspot_v2: HotspotV2Config
 
 
 def load_config(config_path: str) -> PipelineConfig:
@@ -71,6 +80,7 @@ def load_config(config_path: str) -> PipelineConfig:
     features = raw["features"]
     tokenizer = raw["tokenizer"]
     train = raw["train"]
+    hotspot_v2 = raw.get("hotspot_v2") or {}
 
     return PipelineConfig(
         paths=PathsConfig(
@@ -102,5 +112,10 @@ def load_config(config_path: str) -> PipelineConfig:
             output_dir=to_path(tokenizer["output_dir"]),
         ),
         train=TrainConfig(context_steps=int(train["context_steps"])),
+        hotspot_v2=HotspotV2Config(
+            output_dir=to_path(str(hotspot_v2.get("output_dir") or "data/gold/tokens/h3_hotspot_v2")),
+            runtime_dir=to_path(str(hotspot_v2.get("runtime_dir") or ".runtime/hotspot_v2")),
+            neg_per_hour=int(hotspot_v2.get("neg_per_hour") or 50),
+            seed_hours=int(hotspot_v2.get("seed_hours") or 168),
+        ),
     )
-

@@ -235,3 +235,6 @@ server/venv/
 /data/gold/
 /output/
 /artifacts/
+/.runtime/
+/.env.local
+/TrafficMamba/

@@ -9,6 +9,10 @@ import sys
 import time
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
+
+from config import load_config
+
 
 def _venv_python() -> Path | None:
     root = Path(__file__).resolve().parent
@@ -166,32 +170,45 @@ def _preview_safety_output(path: Path, *, n: int) -> str:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="ETA MVP: fetch forecast + run hotspot inference (venv)")
+    ap = argparse.ArgumentParser(description="ETA MVP: fetch forecast + run hotspot inference (v2 default; venv)")
     ap.add_argument("--config", default="configs/pipeline.toml")
-    ap.add_argument("--model", default="artifacts/h3_hotspot_model.pt")
+    ap.add_argument("--variant", choices=["v1", "v2"], default="v2")
+    ap.add_argument("--model", default=None, help="Defaults to the checkpoint for --variant")
     ap.add_argument("--forecast-csv", default="data/bronze/austin_forecast_live.csv")
     ap.add_argument("--out", default="output/phase1_output.json")
     ap.add_argument("--horizon-index", type=int, default=0, help="0=first forecast hour, 1=second, etc.")
     ap.add_argument("--top-k", type=int, default=50)
     ap.add_argument("--threshold", type=float, default=0.0)
     ap.add_argument("--skip-forecast", action="store_true", help="Use existing forecast CSV (no API call)")
+    ap.add_argument("--skip-live-incidents", action="store_true", help="(v2) Skip Socrata live-incident fetch")
     ap.add_argument("--preview-lines", type=int, default=8)
     ap.add_argument("--once", action="store_true", help="Run a single inference cycle and exit")
     args = ap.parse_args()
 
     root = Path(__file__).resolve().parent
+    _load_dotenv(root / ".env.local")
     _load_dotenv(root / ".env")
 
     _reexec_into_venv()
 
-    model_path = (root / args.model).resolve()
+    cfg = load_config(args.config)
+
+    default_model = "artifacts/h3_hotspot_model.pt" if args.variant == "v1" else "artifacts/h3_hotspot_v2_model.pt"
+    model_arg = str(args.model) if args.model else default_model
+
+    model_path = (root / model_arg).resolve()
     if not model_path.exists():
+        train_cmd = (
+            ".venv/bin/python eta_mvp_run.py --config configs/pipeline.toml --hotspot v1"
+            if args.variant == "v1"
+            else ".venv/bin/python eta_mvp_run.py --config configs/pipeline.toml"
+        )
         raise SystemExit(
             "\n".join(
                 [
                     f"[infer] missing model checkpoint: {model_path}",
                     "Train it with:",
-                    "  .venv/bin/python eta_mvp_run.py --config configs/pipeline.toml",
+                    f"  {train_cmd}",
                 ]
             )
         )
@@ -209,6 +226,26 @@ def main() -> None:
         if not args.skip_forecast:
             _run([sys.executable, "scripts/fetch_forecast.py"], cwd=root)
 
+        if args.variant == "v2" and not args.skip_live_incidents:
+            runtime_dir = cfg.hotspot_v2.runtime_dir
+            out_ndjson = runtime_dir / "incidents.ndjson"
+            out_state = runtime_dir / "incidents_fetch_state.json"
+            _run(
+                [
+                    sys.executable,
+                    "scripts/fetch_live_incidents.py",
+                    "--out",
+                    str(out_ndjson),
+                    "--state",
+                    str(out_state),
+                    "--seed-hours",
+                    str(int(cfg.hotspot_v2.seed_hours)),
+                    "--datetime-format",
+                    str(cfg.silverize.datetime_format),
+                ],
+                cwd=root,
+            )
+
         if not forecast_path.exists():
             raise SystemExit(
                 "\n".join(
@@ -220,25 +257,30 @@ def main() -> None:
                 )
             )
 
+        infer_script = "src/model/infer_hotspot.py" if args.variant == "v1" else "src/model/infer_hotspot_v2.py"
+        infer_cmd = [
+            sys.executable,
+            infer_script,
+            "--config",
+            args.config,
+            "--model",
+            str(model_path),
+            "--forecast-csv",
+            str(forecast_path),
+            "--out",
+            args.out,
+            "--horizon-index",
+            str(args.horizon_index),
+            "--top-k",
+            str(args.top_k),
+            "--threshold",
+            str(args.threshold),
+        ]
+        if args.variant == "v2":
+            infer_cmd.extend(["--runtime-dir", str(cfg.hotspot_v2.runtime_dir)])
+
         _run(
-            [
-                sys.executable,
-                "src/model/infer_hotspot.py",
-                "--config",
-                args.config,
-                "--model",
-                str(model_path),
-                "--forecast-csv",
-                str(forecast_path),
-                "--out",
-                args.out,
-                "--horizon-index",
-                str(args.horizon_index),
-                "--top-k",
-                str(args.top_k),
-                "--threshold",
-                str(args.threshold),
-            ],
+            infer_cmd,
             cwd=root,
         )
 

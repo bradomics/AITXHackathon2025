@@ -1,10 +1,14 @@
 openmeteo-requests
 requests-cache
 retry-requests
+numpy
 pandas
 pytz
 h3
 torch
+scikit-learn
+holidays
+mamba-ssm; platform_system == "Linux"
 websockets
 traci
 eclipse-sumo

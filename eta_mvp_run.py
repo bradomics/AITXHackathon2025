@@ -201,9 +201,79 @@ def _run_train(*, config_path: str) -> None:
     )
 
 
+def _run_hotspot_v2_data(*, config_path: str) -> None:
+    cfg = load_config(config_path)
+
+    incidents_path = cfg.paths.silver_dir / cfg.silverize.incidents_output_name
+    weather_path = cfg.paths.silver_dir / cfg.silverize.weather_output_name
+    aadt_path = cfg.paths.silver_dir / cfg.silverize.aadt_output_name
+    traffic_counts_dir = cfg.paths.bronze_dir / "austin_traffic_counts"
+
+    if not incidents_path.exists():
+        raise FileNotFoundError(incidents_path)
+    if not weather_path.exists():
+        raise FileNotFoundError(weather_path)
+    if not aadt_path.exists():
+        raise FileNotFoundError(aadt_path)
+
+    if not _has_module("h3"):
+        _exit_missing_deps(stage="hotspot_v2_data", missing="h3")
+    if not _has_module("numpy"):
+        _exit_missing_deps(stage="hotspot_v2_data", missing="numpy")
+
+    from model.build_h3_hotspot_v2_dataset import build_h3_hotspot_v2_dataset
+
+    stats = build_h3_hotspot_v2_dataset(
+        incidents_csv=incidents_path,
+        weather_hourly_csv=weather_path,
+        aadt_stations_csv=aadt_path,
+        traffic_counts_dir=traffic_counts_dir if traffic_counts_dir.exists() else None,
+        out_dir=cfg.hotspot_v2.output_dir,
+        datetime_format=cfg.silverize.datetime_format,
+        bucket_minutes=int(cfg.features.bucket_minutes),
+        h3_resolution=int(cfg.tokenizer.h3_resolution),
+        austin_center_lat=float(cfg.tokenizer.austin_center_lat),
+        austin_center_lon=float(cfg.tokenizer.austin_center_lon),
+        austin_radius_km=float(cfg.tokenizer.austin_radius_km),
+        aadt_max_distance_km=float(cfg.features.aadt_max_distance_km),
+        lookback_hours=cfg.features.lookback_hours,
+        ema_half_life_hours=float(cfg.features.ema_half_life_hours),
+        neg_per_hour=int(cfg.hotspot_v2.neg_per_hour),
+    )
+
+    print(
+        "[hotspot_v2_data] "
+        f"cells={stats.n_cells} buckets={stats.n_buckets} samples={stats.n_samples} "
+        f"pos_rows={stats.n_pos_rows} neg_rows={stats.n_neg_rows} -> {stats.out_dir}"
+    )
+
+
+def _run_hotspot_v2_train(*, config_path: str) -> None:
+    cfg = load_config(config_path)
+
+    data_dir = cfg.hotspot_v2.output_dir
+    ds_path = data_dir / "dataset.npz"
+    meta_path = data_dir / "meta.json"
+    if not ds_path.exists():
+        raise FileNotFoundError(ds_path)
+    if not meta_path.exists():
+        raise FileNotFoundError(meta_path)
+
+    if not _has_module("torch"):
+        _exit_missing_deps(stage="hotspot_v2_train", missing="torch")
+    if not _has_module("numpy"):
+        _exit_missing_deps(stage="hotspot_v2_train", missing="numpy")
+
+    from model.train_hotspot_v2 import train_hotspot_v2_model
+
+    out_path = Path("artifacts/h3_hotspot_v2_model.pt")
+    train_hotspot_v2_model(data_dir=data_dir, out_path=out_path)
+
+
 def main() -> None:
-    ap = argparse.ArgumentParser(description="ETA MVP: bronze -> silver -> gold -> tokenize -> train")
+    ap = argparse.ArgumentParser(description="ETA MVP: bronze -> silver -> gold -> hotspot training (v2 default)")
     ap.add_argument("--config", default="configs/pipeline.toml")
+    ap.add_argument("--hotspot", choices=["v1", "v2"], default="v2", help="Which hotspot model to train by default")
 
     g = ap.add_mutually_exclusive_group()
     g.add_argument("--only-silver", action="store_true", help="Run bronze -> silver only")
@@ -211,6 +281,8 @@ def main() -> None:
     g.add_argument("--only-etl", action="store_true", help="Run bronze -> silver -> gold (no tokenize/train)")
     g.add_argument("--only-tok", action="store_true", help="Run tokenizer only")
     g.add_argument("--only-train", action="store_true", help="Run training only")
+    g.add_argument("--only-hotspot-v2-data", action="store_true", help="Build v2 hotspot dataset only")
+    g.add_argument("--only-hotspot-v2-train", action="store_true", help="Train v2 hotspot model only")
 
     args = ap.parse_args()
 
@@ -218,6 +290,10 @@ def main() -> None:
     if args.only_tok:
         required_modules = ["h3", "numpy"]
     elif args.only_train:
+        required_modules = ["torch", "numpy"]
+    elif args.only_hotspot_v2_data:
+        required_modules = ["h3", "numpy"]
+    elif args.only_hotspot_v2_train:
         required_modules = ["torch", "numpy"]
     elif not (args.only_silver or args.only_gold or args.only_etl):
         required_modules = ["h3", "numpy", "torch"]
@@ -240,11 +316,22 @@ def main() -> None:
     if args.only_train:
         _run_train(config_path=args.config)
         return
+    if args.only_hotspot_v2_data:
+        _run_hotspot_v2_data(config_path=args.config)
+        return
+    if args.only_hotspot_v2_train:
+        _run_hotspot_v2_train(config_path=args.config)
+        return
 
     _run_silver(config_path=args.config)
     _run_gold(config_path=args.config)
-    _run_tok(config_path=args.config)
-    _run_train(config_path=args.config)
+    if args.hotspot == "v1":
+        _run_tok(config_path=args.config)
+        _run_train(config_path=args.config)
+        return
+
+    _run_hotspot_v2_data(config_path=args.config)
+    _run_hotspot_v2_train(config_path=args.config)
 
 
 if __name__ == "__main__":
