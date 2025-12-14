@@ -243,6 +243,8 @@ export function AustinHeatmapCard() {
     const seenIncidentIdsRef = React.useRef<Set<string>>(new Set());
     const [incidentMarkers, setIncidentMarkers] = useState<Incident[]>([]);
 
+    const completedTripIdsRef = React.useRef<Set<string>>(new Set());
+
 
     // Trips
     const [simTime, setSimTime] = useState(0);              // global clock (seconds)
@@ -646,21 +648,70 @@ export function AustinHeatmapCard() {
         };
     }, []);
 
+    // useEffect(() => {
+    //     let raf = 0;
+    //     let last = 0;
+    //     const start = performance.now();
+
+    //     const tick = (t: number) => {
+    //         if (t - last > 400) { // update ~2.5 FPS for perf
+    //             last = t;
+
+    //             const nowS = (t - start) / 1000;
+    //             setSimTime(nowS);
+
+    //             // prune completed trips
+    //             setTrips((prev) => prev.filter((tr) => nowS <= tr.endTime + 0.25));
+    //         }
+    //         raf = requestAnimationFrame(tick);
+    //     };
+
+    //     raf = requestAnimationFrame(tick);
+    //     return () => cancelAnimationFrame(raf);
+    // }, []);
+
     useEffect(() => {
         let raf = 0;
         let last = 0;
         const start = performance.now();
 
         const tick = (t: number) => {
-            if (t - last > 400) { // update ~2.5 FPS for perf
+            if (t - last > 400) {
                 last = t;
 
                 const nowS = (t - start) / 1000;
                 setSimTime(nowS);
 
-                // prune completed trips
-                setTrips((prev) => prev.filter((tr) => nowS <= tr.endTime + 0.25));
+                setTrips((prev) => {
+                    // trips that have completed (asset arrived)
+                    const completed = prev.filter((tr) => nowS > tr.endTime);
+
+                    if (completed.length) {
+                        // only process each completed trip once
+                        const newlyCompletedTargetIds: string[] = [];
+                        for (const tr of completed) {
+                            if (!completedTripIdsRef.current.has(tr.id)) {
+                                completedTripIdsRef.current.add(tr.id);
+                                newlyCompletedTargetIds.push(tr.targetId);
+                            }
+                        }
+
+                        if (newlyCompletedTargetIds.length) {
+                            // ✅ remove destination incident markers
+                            setIncidentMarkers((markers) =>
+                                markers.filter((m) => !newlyCompletedTargetIds.includes(m.traffic_report_id))
+                            );
+
+                            // optional: allow re-dispatch if the same traffic_report_id comes back later
+                            newlyCompletedTargetIds.forEach((id) => dispatchedIdsRef.current.delete(id));
+                        }
+                    }
+
+                    // keep trips slightly past end for smooth visuals
+                    return prev.filter((tr) => nowS <= tr.endTime + 0.25);
+                });
             }
+
             raf = requestAnimationFrame(tick);
         };
 
