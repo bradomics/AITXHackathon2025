@@ -208,6 +208,30 @@ async def get_incident_spots(request):
         )
 
 
+async def get_safety_assets(request):
+    """GET /api/safety-assets - Returns safety asset placement data."""
+    try:
+        safety_file = find_json_file(SAFETY_JSON_PATH)
+        if not safety_file:
+            return web.json_response(
+                {"error": "phase1_safety_output.json not found"},
+                status=404
+            )
+        
+        content = safety_file.read_text()
+        data = json.loads(content)
+        
+        # Return the assets structure as-is
+        return web.json_response({
+            "assets": data.get("assets", {})
+        })
+    except Exception as e:
+        return web.json_response(
+            {"error": f"Error loading safety assets: {str(e)}"},
+            status=500
+        )
+
+
 async def health_check(request):
     """GET /health - Health check endpoint."""
     return web.Response(text="OK")
@@ -221,6 +245,7 @@ async def main():
     app.router.add_get("/api/risk-spots", get_risk_spots)
     app.router.add_get("/api/risk-spots/collisions", get_collision_spots)
     app.router.add_get("/api/risk-spots/incidents", get_incident_spots)
+    app.router.add_get("/api/safety-assets", get_safety_assets)
     app.router.add_get("/health", health_check)
     
     # Configure CORS
@@ -248,6 +273,7 @@ async def main():
     print(f"  GET /api/risk-spots - All risk spots")
     print(f"  GET /api/risk-spots/collisions - Collision spots only")
     print(f"  GET /api/risk-spots/incidents - Incident spots only")
+    print(f"  GET /api/safety-assets - Safety assets")
     print(f"  GET /health - Health check")
     
     await site.start()

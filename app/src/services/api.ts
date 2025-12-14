@@ -1,8 +1,7 @@
 import { RiskPoint, IncidentPoint, Hotspot } from "../types";
 
-// API Configuration
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:8000";
-const RISK_SPOTS_API_URL = process.env.EXPO_PUBLIC_RISK_SPOTS_API_URL || "http://localhost:8001";
+// API Configuration - All endpoints use the same server
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:8001";
 const AUSTIN_API_URL = "https://data.austintexas.gov/resource/dx9v-zd7x.json";
 
 // Austin API response type
@@ -213,7 +212,7 @@ interface RiskSpotsResponse {
  */
 export async function fetchRiskSpots(): Promise<{ collisionPoints: RiskPoint[]; incidentPoints: RiskPoint[] }> {
   try {
-    const url = `${RISK_SPOTS_API_URL}/api/risk-spots`;
+    const url = `${API_BASE_URL}/api/risk-spots`;
     const response = await fetch(url);
     
     if (!response.ok) {
