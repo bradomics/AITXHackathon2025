@@ -22,6 +22,7 @@ import {
   IconShieldHalf,
   IconShieldBolt,
   IconUsers,
+  IconCarCrane,
 } from "@tabler/icons-react"
 
 import { NavDocuments } from "@/components/nav-documents"
@@ -48,66 +49,18 @@ const data = {
   navMain: [
     {
       title: "Public Safety / EMS",
-      url: "#",
+      url: "/public-safety",
       icon: IconShieldHalf,
     },
     {
       title: "Traffic Controller / Dispatcher",
-      url: "#",
+      url: "/traffic-control",
       icon: IconRoad,
     },
     {
-      title: "Truck Operator / Roadside Assistance",
-      url: "#",
-      icon: IconChartBar,
-    },
-  ],
-  navClouds: [
-    {
-      title: "Capture",
-      icon: IconCamera,
-      isActive: true,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Proposal",
-      icon: IconFileDescription,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Prompts",
-      icon: IconFileAi,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
+      title: "Tow Truck / Roadside Assistance",
+      url: "/truck-operator",
+      icon: IconCarCrane,
     },
   ],
   navSecondary: [
@@ -158,7 +111,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             >
               <a href="#">
                 <MapPin className="!size-5" />
-                <span className="text-base font-semibold">ETA</span>
+                <span className="text-base font-medium" style={{ letterSpacing: '-1px' }}><strong>ETA:</strong> Ensemble Traffic Agents</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>

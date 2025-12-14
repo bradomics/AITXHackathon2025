@@ -28,7 +28,7 @@ export function NavMain({
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton tooltip={item.title}>
                 {item.icon && <item.icon />}
-                <span>{item.title}</span>
+                <a href={`${process.env.NEXT_PUBLIC_SITE_URL}/${item.url}`}>{item.title}</a>
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
