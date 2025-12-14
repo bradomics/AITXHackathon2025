@@ -1061,7 +1061,7 @@ export function AustinHeatmapCard() {
             <CardHeader className="pt-4">
                 <CardTitle>Public Safety / EMS View</CardTitle>
                 <CardDescription className="pb-0 gap-0">
-                    {mapView === "digital-twin" ? `Hospital View` : "Incident & Collision Hotspots"}
+                    {mapView === "digital-twin" ? `Hospital View` : "Forward-position your assets for intelligent routing."}
                 </CardDescription>
 
                 <div className="flex flex-col items-start pb-0">
