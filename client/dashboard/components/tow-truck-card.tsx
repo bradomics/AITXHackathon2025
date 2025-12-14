@@ -1073,7 +1073,7 @@ export function TowTruckCard() {
                             onClick={() => handleMapViewChange("digital-twin")}
                             variant={mapView === "digital-twin" ? "default" : "outline"}
                         >
-                            Hospital View
+                            Tow Yard View
                         </Button>
                     </ButtonGroup>
                 </div>
