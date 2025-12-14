@@ -236,7 +236,7 @@ function normalizeVehicleType(raw: unknown, vehicleId?: any): VehicleType {
     return "red-car";
 }
 
-export function AustinHeatmapCard() {
+export function TowTruckCard() {
     const [mapView, setMapView] = useState<"heatmap" | "digital-twin" | "composite-view">("heatmap");
     const [vehicles, setVehicles] = useState<(Vehicle & { type: VehicleType })[]>([]);
     const [wsStatus, setWsStatus] = useState<"disconnected" | "connecting" | "connected" | "error">("disconnected");
@@ -1059,7 +1059,7 @@ export function AustinHeatmapCard() {
     return (
         <Card className="overflow-hidden p-0">
             <CardHeader className="pt-4">
-                <CardTitle>Public Safety / EMS View</CardTitle>
+                <CardTitle>Tow Truck View</CardTitle>
                 <CardDescription className="pb-0 gap-0">
                     {mapView === "digital-twin" ? `Hospital View` : "Incident & Collision Hotspots"}
                 </CardDescription>
