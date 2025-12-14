@@ -133,7 +133,6 @@ async def main() -> None:
                     mult = model.predict_multipliers(x).squeeze(0).detach().cpu().tolist()
 
                 engine.apply_multipliers(mult)
-                engine.step_interval()
                 obs = engine.observe_flows_ratio()
 
                 # Update rolling buffer
@@ -161,6 +160,12 @@ async def main() -> None:
                     "edges": edges,
                 }
                 await broadcast(payload)
+
+                # Step the simulation interval. For SUMO this can be slow, so yield periodically.
+                if hasattr(engine, "step_interval_async"):
+                    await engine.step_interval_async()
+                else:
+                    engine.step_interval()
 
                 intervals += 1
                 sim_dt = sim_dt + timedelta(seconds=control_interval_s)

@@ -59,6 +59,13 @@ Controls config additions (per control):
 
 The counts are typically **15-minute bins**, so set `control_interval_s` to `900` in the controls JSON.
 
+Default (matches `eta_sim_go.py`):
+
+```bash
+.venv/bin/python eta_sim_run.py
+# writes: sim/artifacts/demand_gru_counts_austin.pt
+```
+
 Example:
 
 ```bash
@@ -104,11 +111,12 @@ python3 eta_sim_go.py
 On the machine running the *GUI* SUMO you want to drive:
 
 ```bash
-sumo-gui -c sumo/austin/sim.sumocfg --remote-port 8813
+sumo-gui -c sumo/austin/twin.sumocfg --remote-port 8813 --start
 python3 sim/ws_drive_sumo.py --ws-url ws://PUBLISHER_HOST:8765 --sumo-port 8813
 ```
 
-By default, `sim/ws_drive_sumo.py` advances SUMO by one `control_interval_s` per message; add `--no-step` if you want to run/step SUMO yourself.
+By default, `sim/ws_drive_sumo.py` steps the twin continuously (1s ticks) and uses `multiplier=1.0` until the first inference message arrives.
+Use `--tick-s 0.5` / `--no-realtime` to adjust how fast it runs, or add `--no-step` if you want to run/step SUMO yourself (it will only inject on each message).
 
 If the GUI machine can’t reach the publisher directly, use an SSH tunnel (publisher binds to `127.0.0.1` by default):
 

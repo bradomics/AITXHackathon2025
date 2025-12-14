@@ -237,7 +237,7 @@ function normalizeVehicleType(raw: unknown, vehicleId?: any): VehicleType {
 }
 
 export function AustinTrafficControllerCard() {
-    const [mapView, setMapView] = useState<"heatmap" | "digital-twin" | "composite-view">("heatmap");
+    const [mapView, setMapView] = useState<"heatmap" | "digital-twin" | "composite-view">("digital-twin");
     const [vehicles, setVehicles] = useState<(Vehicle & { type: VehicleType })[]>([]);
     const [wsStatus, setWsStatus] = useState<"disconnected" | "connecting" | "connected" | "error">("disconnected");
 
@@ -1061,19 +1061,13 @@ export function AustinTrafficControllerCard() {
             <CardHeader className="pt-4">
                 <CardTitle>Traffic Controller View</CardTitle>
                 <CardDescription className="pb-0 gap-0">
-                    {mapView === "digital-twin" ? `Hospital View` : "Incident & Collision Hotspots"}
+                    {mapView === "digital-twin" ? `Digital Twin` : "Incident & Collision Hotspots"}
                 </CardDescription>
 
                 <div className="flex flex-col items-start pb-0">
                     <ButtonGroup>
-                        <Button onClick={() => handleMapViewChange("heatmap")} variant={mapView === "heatmap" ? "default" : "outline"}>
-                            Heatmap + Active Incidents
-                        </Button>
-                        <Button
-                            onClick={() => handleMapViewChange("digital-twin")}
-                            variant={mapView === "digital-twin" ? "default" : "outline"}
-                        >
-                            Hospital View
+                        <Button onClick={() => handleMapViewChange("heatmap")} variant={mapView === "digital-twin" ? "default" : "outline"}>
+                            Digital Twin (SUMO + Reinforcement Learning)
                         </Button>
                     </ButtonGroup>
                 </div>

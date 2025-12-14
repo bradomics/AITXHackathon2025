@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import errno
 import os
 import shutil
 import signal
@@ -9,6 +10,27 @@ import sys
 import getpass
 import socket
 from pathlib import Path
+
+
+def _pick_free_port(host: str, preferred: int) -> int:
+    if preferred <= 0:
+        raise ValueError("preferred port must be > 0")
+    for port in range(preferred, preferred + 50):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            s.bind((host, port))
+        except OSError as e:
+            if e.errno == errno.EADDRINUSE:
+                continue
+            raise
+        finally:
+            try:
+                s.close()
+            except Exception:
+                pass
+        return port
+    raise SystemExit(f"No free port found starting at {preferred} for host={host!r}.")
 
 
 def main() -> None:
@@ -21,7 +43,7 @@ def main() -> None:
     ap.add_argument("--ws-port", type=int, default=8765)
     ap.add_argument("--realtime", action="store_true")
     ap.add_argument("--max-intervals", type=int, default=0, help="0=run forever")
-    ap.add_argument("--sumo-cfg", default="sumo/austin/sim.sumocfg", help="Required for --engine sumo")
+    ap.add_argument("--sumo-cfg", default="sumo/austin/twin.sumocfg", help="Required for --engine sumo")
     ap.add_argument("--sumo-binary", default="sumo")
     ap.add_argument("--sumo-step-s", type=float, default=0.1)
     ap.add_argument("--close-edge", action="append", default=[])
@@ -70,8 +92,18 @@ def main() -> None:
         )
 
     ws_host = str(args.ws_host)
-    ws_port = int(args.ws_port)
+    requested_ws_port = int(args.ws_port)
+    ws_port = requested_ws_port
+
+    # Avoid a common footgun: stale publisher still holding the default port.
+    if requested_ws_port == 8765 and "--ws-port" not in sys.argv:
+        ws_port = _pick_free_port(ws_host, requested_ws_port)
+        args.ws_port = ws_port
+
     ws_url = f"ws://{ws_host}:{ws_port}"
+    if ws_port != requested_ws_port:
+        print(f"[eta_sim_go] ws-port {requested_ws_port} in use; using {ws_port}", flush=True)
+
     if ws_host in {"127.0.0.1", "localhost"}:
         user = getpass.getuser()
         host = socket.gethostname()
@@ -82,6 +114,14 @@ def main() -> None:
         print(f"[eta_sim_go] then connect: ws://localhost:{ws_port}", flush=True)
     else:
         print(f"[eta_sim_go] ws publisher: {ws_url}", flush=True)
+
+    if ws_host in {"127.0.0.1", "localhost"}:
+        print("[eta_sim_go] GUI twin:", flush=True)
+        print("  sumo -c sumo/austin/twin.sumocfg --remote-port 8813 --start", flush=True)
+        print(
+            f"  python3 sim/ws_drive_sumo.py --ws-url ws://localhost:{ws_port} --sumo-port 8813",
+            flush=True,
+        )
 
     venv_python = repo_root / ".venv" / "bin" / "python"
     python = str(venv_python) if venv_python.exists() else sys.executable
