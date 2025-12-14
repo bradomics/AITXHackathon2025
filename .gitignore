@@ -228,3 +228,5 @@ client/dashboard/node_modules/
 /data/gold/
 /output/
 /artifacts/
+/venv/
+server/venv/

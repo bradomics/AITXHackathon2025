@@ -117,7 +117,7 @@ def main() -> None:
 
     if ws_host in {"127.0.0.1", "localhost"}:
         print("[eta_sim_go] GUI twin:", flush=True)
-        print("  sumo-gui -c sumo/austin/twin.sumocfg --remote-port 8813 --start", flush=True)
+        print("  sumo -c sumo/austin/twin.sumocfg --remote-port 8813 --start", flush=True)
         print(
             f"  python3 sim/ws_drive_sumo.py --ws-url ws://localhost:{ws_port} --sumo-port 8813",
             flush=True,
