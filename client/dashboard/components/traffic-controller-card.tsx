@@ -1002,7 +1002,7 @@ export function AustinTrafficControllerCard() {
             police: { url: "/models/police-car.glb", sizeScale: 5, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
             "red-car": { url: "/models/red-car.glb", sizeScale: 10, yawOffset: 270, flip: 0, pitch: 0, roll: 90 },
             "sports-car": { url: "/models/sports-car.glb", sizeScale: 5, yawOffset: 90, flip: 0, pitch: 0, roll: 90 },
-            cybertruck: { url: "/models/cybertruck.glb", sizeScale: 50, yawOffset: 20, flip: 0, pitch: 0, roll: 90 },
+            cybertruck: { url: "/models/cybertruck.glb", sizeScale: 50, yawOffset: 345, flip: 180, pitch: 0, roll: 90 },
         };
 
         const mkLayer = (type: VehicleType) => {
