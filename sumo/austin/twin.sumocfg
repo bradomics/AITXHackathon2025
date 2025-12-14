@@ -1,7 +1,7 @@
 <configuration>
   <input>
     <net-file value="austin.net.xml"/>
-    <route-files value="routes.rou.xml"/>
+    <route-files value="routes_fleet.rou.xml"/>
   </input>
 
   <time>

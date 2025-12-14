@@ -67,15 +67,17 @@ type Asset = {
 };
 
 type DispatchTrip = {
-    id: string;                 // unique trip id
-    kind: "collision" | "incident";
-    targetId: string;           // traffic_report_id
-    assetId: string;
+  id: string;
+  kind: "collision" | "incident";
+  targetId: string;
+  assetId: string;
 
-    path: [number, number][];
-    timestamps: number[];        // absolute timestamps (seconds on global clock)
-    endTime: number;             // for cleanup
+  path: [number, number][];
+  timestamps: number[];        // absolute timestamps
+  startTime: number;           // ✅ add this
+  endTime: number;
 };
+
 
 
 const ASSET_PLACEMENT = assetPlacementSafetyOutput as any;
@@ -598,7 +600,7 @@ export function AustinHeatmapCard() {
                 data: INCIDENT_POINTS,
                 getPosition: (d) => d.position,
                 getWeight: (d) => d.weight ?? 1,
-                radiusPixels: 50,
+                radiusPixels: 90,
                 intensity: 1,
                 threshold: 0.03,
                 aggregation: "SUM",
@@ -609,9 +611,9 @@ export function AustinHeatmapCard() {
                 data: COLLISION_POINTS,
                 getPosition: (d) => d.position,
                 getWeight: (d) => d.weight ?? 1,
-                radiusPixels: 50,
+                radiusPixels: 90,
                 intensity: 1,
-                threshold: 0.03,
+                threshold: 0.1,
                 aggregation: "SUM",
                 colorRange: COLLISION_COLOR_RANGE,
             }),
@@ -845,19 +847,25 @@ export function AustinHeatmapCard() {
 
                 // timestamps relative, then shifted to global simTime
                 const rel = buildTimestamps(coords, 60);               // tweak speed
+                // const startTime = simTime;
+                // const abs = rel.map((x) => x + startTime);
+                // const endTime = abs[abs.length - 1] ?? startTime;
+
                 const startTime = simTime;
                 const abs = rel.map((x) => x + startTime);
                 const endTime = abs[abs.length - 1] ?? startTime;
 
                 const newTrip: DispatchTrip = {
-                    id: `${kind}-${asset.asset_id}-${targetId}-${Math.round(startTime * 1000)}`,
-                    kind,
-                    targetId,
-                    assetId: asset.asset_id,
-                    path: coords,
-                    timestamps: abs,
-                    endTime,
+                id: `${kind}-${asset.asset_id}-${targetId}-${Math.round(startTime * 1000)}`,
+                kind,
+                targetId,
+                assetId: asset.asset_id,
+                path: coords,
+                timestamps: abs,
+                startTime,          // ✅
+                endTime,
                 };
+
 
                 setTrips((prev) => {
                     // keep max 10
@@ -895,27 +903,31 @@ export function AustinHeatmapCard() {
 
 
 
-    const tripsLayer = useMemo(() => {
-        if (!trips.length) return null;
+const tripsLayer = useMemo(() => {
+  if (!trips.length) return null;
 
-        return new TripsLayer<DispatchTrip>({
-            id: "dispatch-trips",
-            data: trips,
-            getPath: (d) => d.path,
-            getTimestamps: (d) => d.timestamps,
-            currentTime: simTime,
+  // keep the whole line from start -> current position for the longest active trip
+  const maxDurationS = Math.max(
+    0,
+    ...trips.map((tr) => (tr.endTime ?? 0) - (tr.startTime ?? tr.timestamps?.[0] ?? 0))
+  );
 
-            // trail length in seconds of *global clock*.
-            // Use a fixed trailing window (looks good with multiple trips).
-            trailLength: 25,
-            fadeTrail: true,
+  return new TripsLayer<DispatchTrip>({
+    id: "dispatch-trips",
+    data: trips,
+    getPath: (d) => d.path,
+    getTimestamps: (d) => d.timestamps,
+    currentTime: simTime,
 
-            widthMinPixels: 6,
-            opacity: 0.95,
+    trailLength: maxDurationS,  // ✅ full-length trail (+2s buffer)
+    fadeTrail: true,
 
-            getColor: (d) => (d.kind === "collision" ? [255, 80, 80] : [80, 200, 255]),
-        });
-    }, [trips, simTime]);
+    widthMinPixels: 6,
+    opacity: 0.8,
+    getColor: (d) => (d.kind === "collision" ? [255, 80, 80] : [80, 200, 255]),
+  });
+}, [trips, simTime]);
+
 
 
 
