@@ -25,7 +25,7 @@ interface VehiclePath {
 
 export function MapViewComponent({ onIncidentPress, onVehiclePress, onLongPress }: MapViewProps) {
   const { role, effectiveTheme } = useApp();
-  const { vehicles, collisionPoints, incidentPoints } = useDigitalTwin();
+  const { vehicles, collisionPoints, incidentRiskSpots, incidentPoints } = useDigitalTwin();
   const [region, setRegion] = useState({
     latitude: DEFAULT_VIEW_STATE.latitude,
     longitude: DEFAULT_VIEW_STATE.longitude,
@@ -147,6 +147,26 @@ export function MapViewComponent({ onIncidentPress, onVehiclePress, onLongPress 
     }
   };
 
+  // Scale weight to radius in meters
+  // Weights typically range from 0.1 to 0.6, map to 100-600 meters radius
+  const scaleWeightToRadius = (weight: number, minRadius: number = 100, maxRadius: number = 600): number => {
+    // Normalize weight to 0-1 range (assuming weights are typically 0.1-0.6)
+    const minWeight = 0.1;
+    const maxWeight = 0.6;
+    const normalizedWeight = Math.max(0, Math.min(1, (weight - minWeight) / (maxWeight - minWeight)));
+    
+    // Map to radius range
+    return minRadius + (normalizedWeight * (maxRadius - minRadius));
+  };
+
+  // Scale weight to opacity (higher weight = more visible)
+  const scaleWeightToOpacity = (weight: number, minOpacity: number = 0.2, maxOpacity: number = 0.5): number => {
+    const minWeight = 0.1;
+    const maxWeight = 0.6;
+    const normalizedWeight = Math.max(0, Math.min(1, (weight - minWeight) / (maxWeight - minWeight)));
+    return minOpacity + (normalizedWeight * (maxOpacity - minOpacity));
+  };
+
   return (
     <View style={styles.container}>
       <MapView
@@ -170,7 +190,9 @@ export function MapViewComponent({ onIncidentPress, onVehiclePress, onLongPress 
         {layerConfig?.showCollisionPoints &&
           collisionPoints.map((point, index) => {
             const [lng, lat] = point.position;
-            const radius = Math.max(50, point.weight * 500); // Scale weight to meters
+            const radius = scaleWeightToRadius(point.weight, 150, 900); // Scaled 1.5x (was 100-600)
+            const opacity = scaleWeightToOpacity(point.weight, 0.2, 0.5);
+            const strokeOpacity = Math.min(1, opacity + 0.3);
             
             return (
               <Circle
@@ -180,31 +202,33 @@ export function MapViewComponent({ onIncidentPress, onVehiclePress, onLongPress 
                   longitude: lng,
                 }}
                 radius={radius}
-                fillColor="rgba(255, 0, 0, 0.3)" // Red transparent
-                strokeColor="rgba(255, 0, 0, 0.6)"
-                strokeWidth={2}
+                fillColor={`rgba(255, 0, 0, ${opacity})`} // Red transparent, scaled by weight
+                strokeColor={`rgba(255, 0, 0, ${strokeOpacity})`}
+                strokeWidth={Math.max(2, Math.round(point.weight * 5))} // Thicker stroke for higher weight
                 zIndex={1}
               />
             );
           })}
 
-        {/* Incident Hotspots - Blue Transparent Circles */}
+        {/* Incident Risk Spots - Blue Transparent Circles (hardcoded risk predictions) */}
         {layerConfig?.showIncidentPoints &&
-          incidentPoints.map((point, index) => {
+          incidentRiskSpots.map((point, index) => {
             const [lng, lat] = point.position;
-            const radius = Math.max(40, point.weight * 400); // Scale weight to meters
+            const radius = scaleWeightToRadius(point.weight, 120, 750); // Scaled 1.5x (was 80-500)
+            const opacity = scaleWeightToOpacity(point.weight, 0.2, 0.5);
+            const strokeOpacity = Math.min(1, opacity + 0.3);
             
             return (
               <Circle
-                key={`incident-${index}`}
+                key={`incident-risk-${index}`}
                 center={{
                   latitude: lat,
                   longitude: lng,
                 }}
                 radius={radius}
-                fillColor="rgba(0, 0, 255, 0.3)" // Blue transparent
-                strokeColor="rgba(0, 0, 255, 0.6)"
-                strokeWidth={2}
+                fillColor={`rgba(59, 130, 246, ${opacity})`} // Blue transparent, scaled by weight
+                strokeColor={`rgba(59, 130, 246, ${strokeOpacity})`}
+                strokeWidth={Math.max(2, Math.round(point.weight * 5))} // Thicker stroke for higher weight
                 zIndex={1}
               />
             );

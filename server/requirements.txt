@@ -2,4 +2,6 @@ asyncio
 websockets
 traci
 sumolib
+aiohttp
+aiohttp-cors
 

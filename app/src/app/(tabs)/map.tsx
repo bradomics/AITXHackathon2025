@@ -1,26 +1,33 @@
 import { useState, useEffect, useRef } from "react";
 import { View, Modal, Text, ScrollView, TouchableOpacity, StyleSheet, Animated, Platform, Linking } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import * as Location from "expo-location";
 import { useApp } from "../../contexts/AppContext";
-import { useWebSocket } from "../../hooks/useWebSocket";
+// WebSocket disabled - mobile app doesn't need vehicle simulation data
+// import { useWebSocket } from "../../hooks/useWebSocket";
 import { useNotifications } from "../../hooks/useNotifications";
 import { useDigitalTwin } from "../../contexts/DigitalTwinContext";
 import { MapViewComponent as MapView } from "../../components/map/MapView";
 import { NotificationBanner } from "../../components/notifications/NotificationBanner";
 import { NavigationPopup } from "../../components/map/NavigationPopup";
 import { TutorialOverlay } from "../../components/tutorial/TutorialOverlay";
-import { IncidentPoint, Vehicle, RecommendedSpot } from "../../types";
+import { IncidentPoint, Vehicle, RecommendedSpot, Hotspot } from "../../types";
 import { Button } from "../../components/ui/Button";
 
 export default function MapScreen() {
   const { role, effectiveTheme } = useApp();
-  const { incidentPoints } = useDigitalTwin();
+  const { incidentPoints, hotspots } = useDigitalTwin();
   const [selectedIncident, setSelectedIncident] = useState<IncidentPoint | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [recommendedSpots, setRecommendedSpots] = useState<RecommendedSpot[]>([]);
   const [navigationTarget, setNavigationTarget] = useState<{ latitude: number; longitude: number } | null>(null);
   const incidentSlideAnim = useRef(new Animated.Value(300)).current;
   const vehicleSlideAnim = useRef(new Animated.Value(300)).current;
+  
+  // Track ALL incidents we've ever seen (persists across re-renders)
+  // Only notify for incidents we haven't seen before
+  const seenIncidentIds = useRef<Set<string>>(new Set());
+  const hasInitialized = useRef(false);
 
   const getTimeSince = (timestamp?: number): string => {
     if (!timestamp) return "Unknown";
@@ -37,45 +44,79 @@ export default function MapScreen() {
     return `${diffDays} day${diffDays !== 1 ? "s" : ""}`;
   };
 
-  // Connect to WebSocket
-  const { status: wsStatus, isConnected } = useWebSocket({
-    enabled: !!role, // Only connect when role is set
-  });
+  // WebSocket disabled - mobile app doesn't need vehicle simulation data
+  // The web client uses this for simulation, but mobile app only needs incidents/hotspots
 
-  // Set up notifications
-  const { notifyRecommendedSpot } = useNotifications();
+  // Set up notifications - ONLY for new incidents (batched)
+  const { notifyNewIncidentsBatch } = useNotifications();
 
-  // Simulate recommended spots (in real app, this would come from the server)
-  // Only run once when connected, not on every render
-  const hasInitializedSpots = useRef(false);
-  
+  // Request location permissions for user location on map
   useEffect(() => {
-    if (role && isConnected && !hasInitializedSpots.current) {
-      hasInitializedSpots.current = true;
-      
-      // Example: Generate some recommended spots based on role
-      const spots: RecommendedSpot[] = [
-        {
-          id: "spot1",
-          position: [-97.7431, 30.2672],
-          type: role === "ems" ? "hospital" : role === "roadside" ? "service-station" : "police-station",
-          name: role === "ems" ? "Austin General Hospital" : role === "roadside" ? "Quick Service" : "Central Police",
-          distance: 500,
-        },
-      ];
-      setRecommendedSpots(spots);
+    const requestLocationPermissions = async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        console.warn("Location permission not granted");
+      }
+    };
+    requestLocationPermissions();
+  }, []);
 
-      // Notify about recommended spots
-      spots.forEach((spot) => {
-        notifyRecommendedSpot(spot);
+  // Convert hotspots to recommended spots
+  useEffect(() => {
+    const spots: RecommendedSpot[] = hotspots.map((hotspot: Hotspot) => ({
+      id: hotspot.id,
+      position: hotspot.position,
+      type: "other", // Hotspots don't have specific types, use "other"
+      name: `High-Risk Area (${(hotspot.risk * 100).toFixed(0)}% risk)`,
+      distance: undefined, // Could calculate if we have user location
+    }));
+    setRecommendedSpots(spots);
+  }, [hotspots]);
+
+  // Notify ONLY for truly new incidents (not seen before)
+  useEffect(() => {
+    // Skip if no incidents yet
+    if (incidentPoints.length === 0) {
+      return;
+    }
+
+    // On first load, mark all current incidents as "seen" without notifying
+    if (!hasInitialized.current) {
+      incidentPoints.forEach(inc => {
+        const id = inc.id || "";
+        if (id) {
+          seenIncidentIds.current.add(id);
+        }
+      });
+      hasInitialized.current = true;
+      console.log(`[Notifications] Initial load: marked ${seenIncidentIds.current.size} incidents as seen`);
+      return;
+    }
+
+    // Find incidents we haven't seen before
+    const newIncidents = incidentPoints.filter(inc => {
+      const id = inc.id || "";
+      if (!id) return false;
+      
+      // If we haven't seen this ID before, it's new
+      if (!seenIncidentIds.current.has(id)) {
+        seenIncidentIds.current.add(id); // Mark as seen immediately
+        return true;
+      }
+      return false;
+    });
+
+    // Batch notify for all new incidents in a single notification
+    if (newIncidents.length > 0) {
+      console.log(`[Notifications] Found ${newIncidents.length} new incident(s) - sending batched notification`);
+      // Send ONE notification for all new incidents
+      notifyNewIncidentsBatch(newIncidents.length, newIncidents).catch(err => {
+        console.error("Error sending batched notification:", err);
       });
     }
-    
-    // Reset when disconnected
-    if (!isConnected) {
-      hasInitializedSpots.current = false;
-    }
-  }, [role, isConnected]); // Remove notifyRecommendedSpot from deps
+  }, [incidentPoints, notifyNewIncidentsBatch]);
+
+  // NO notifications for hotspots - only incidents!
 
   const handleIncidentPress = (incident: IncidentPoint) => {
     setSelectedIncident(incident);
@@ -181,14 +222,8 @@ export default function MapScreen() {
       {/* Tutorial Overlay */}
       <TutorialOverlay />
 
-      {/* WebSocket Status Indicator */}
-      {!isConnected && (
-        <View className="absolute bottom-20 left-4 right-4 bg-yellow-500 dark:bg-yellow-600 rounded-lg p-3">
-          <Text className="text-white font-semibold text-sm">
-            {wsStatus === "connecting" ? "Connecting..." : "Disconnected from server"}
-          </Text>
-        </View>
-      )}
+      {/* WebSocket Status Indicator - Disabled since mobile app doesn't need vehicle simulation */}
+      {/* Removed - mobile app doesn't use vehicle simulation data */}
 
       {/* Incident Detail Modal */}
       <Modal

@@ -23,7 +23,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     onDisconnect: externalOnDisconnect,
   } = options;
 
-  const { setVehicles, setCollisionPoints, setIncidentPoints } = useDigitalTwin();
+  const { setVehicles, setIncidentPoints } = useDigitalTwin();
   const [status, setStatus] = useState<WebSocketStatus>("disconnected");
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -32,8 +32,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const reconnectDelay = 3000; // 3 seconds
 
   // Store context setters in refs to avoid dependency issues
-  const settersRef = useRef({ setVehicles, setCollisionPoints, setIncidentPoints });
-  settersRef.current = { setVehicles, setCollisionPoints, setIncidentPoints };
+  const settersRef = useRef({ setVehicles, setIncidentPoints });
+  settersRef.current = { setVehicles, setIncidentPoints };
 
   // Store callbacks in refs to avoid dependency issues
   const callbacksRef = useRef({
@@ -93,9 +93,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           if (data.vehicles && Array.isArray(data.vehicles)) {
             settersRef.current.setVehicles(data.vehicles);
           }
-          if (data.collisionPoints && Array.isArray(data.collisionPoints)) {
-            settersRef.current.setCollisionPoints(data.collisionPoints);
-          }
+          // Note: collisionPoints are now derived from incidentPoints automatically
+          // Ignore collisionPoints from WebSocket - they come from live incidents API
           if (data.incidentPoints && Array.isArray(data.incidentPoints)) {
             settersRef.current.setIncidentPoints(data.incidentPoints);
           }
